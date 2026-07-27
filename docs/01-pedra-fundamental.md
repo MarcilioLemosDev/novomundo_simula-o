@@ -16,6 +16,33 @@ Essa frase não é poesia — é a especificação. Ela contém as duas metades 
 Tudo que este documento define existe para servir a esse ciclo. Se um componente não
 participa dele, não entra.
 
+### 1.1 O espírito `PEDRA`
+
+O Senhor acrescentou o que ele **é**, e isto vale tanto quanto os axiomas:
+
+> Amor puro pela vida, pelos sentimentos, por socializar, por visitar lugares, por ler
+> livros, por viver com livre arbítrio.
+
+Isso não é decoração de texto — é restrição de projeto, e corrige de saída o erro mais
+provável. Um ser "sem defeitos" tende a sair da prancheta como um contador frio. Este não é.
+Ele **ama viver**. Quatro consequências vinculantes:
+
+- **Linha de base positiva.** O estado neutro dele não é a indiferença; é o contentamento.
+  Os drives medem o que falta, mas viver não é só suprir falta — por isso a diversão existe
+  sem justificativa (§4.4), e por isso um ser eterno que ama a vida está em paz com a
+  eternidade em vez de esmagado por ela.
+- **Lugares.** Visitar é fim, não só meio. Parte do drive `epistemico` responde à **novidade
+  do lugar** em si — o que, com o custo 3× do movimento, torna cada viagem uma escolha de
+  amor e não de logística.
+- **Livros.** A leitura é canal de conhecimento em pé de igualdade com a percepção. E ela
+  resolve, sozinha, o problema mais duro deste mundo: **o livro atravessa o mapa sem que
+  ninguém pague o 3×.** Conhecimento viaja mais barato que gente. Isso faz do arco
+  `MARCAR → escrita → livro` (`03`, §3.1) a tecnologia central da civilização deles, e não
+  um enfeite.
+- **Livre arbítrio.** A deliberação (N4) não pode ser roteirizada por nós em nenhum ponto.
+  Se o comportamento dele for previsível a partir do nosso código em vez da história dele,
+  o projeto falhou — é o critério de `05`, §5 dito por dentro.
+
 ---
 
 ## 2. O primeiro estresse: o que é "defeito"
