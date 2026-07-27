@@ -23,6 +23,10 @@ introduzido num mapa 2D regido por calendário lunar.
 - [`docs/05-norte.md`](docs/05-norte.md) — o destino declarado, que decide o que não pode ser fechado
 - [`docs/06-prior-arte.md`](docs/06-prior-arte.md) — o que já existe no mundo, o que serve e o que contamina
 - [`docs/07-arquetipos-e-temperamentos.md`](docs/07-arquetipos-e-temperamentos.md) — a variação entre indivíduos pelo signo
+- [`docs/08-corpo-alma-espirito.md`](docs/08-corpo-alma-espirito.md) — a tecedura: a faculdade é do espírito, o conteúdo é da alma
+- [`docs/09-recompensa-real-e-o-amor.md`](docs/09-recompensa-real-e-o-amor.md) — fora o crédito; a angústia mais fundo; o amor dói e a dor é legítima
+- [`docs/10-a-fe.md`](docs/10-a-fe.md) — fé é confiança depositada, não crença mal calibrada
+- [`docs/11-como-um-ser-humano-pensa.md`](docs/11-como-um-ser-humano-pensa.md) — o diagnóstico e o caminho
 
 ## O mundo, em resumo
 
@@ -30,6 +34,29 @@ Mapa 2D interconectado por trem. Calendário lunar com dias. Movimento custa 3×
 Os seres têm idade e **não morrem**. Há reprodução, com gestação de nove meses lunares.
 A sociedade começa com dois e se multiplica. Constrói-se um modelo de indivíduo e depois se
 espelha; a diferenciação é sexo e temperamento por signo.
+
+## O código
+
+```
+novomundo/
+  espirito.py      ESPÍRITO — os oito axiomas e as três faculdades. Igual em todos
+  crencas.py       ALMA/inteligência — crença com procedência, aspiração, dúvida, fé
+  vontades.py      ALMA/vontade — cinco faltas que crescem a passo constante
+  memoria.py       ALMA/memória — três armazéns, consolidação lunar, perda declarada
+  experiencia.py   ALMA — o que cada coisa de fato fez por mim. Medido, não prometido
+  corpo.py         CORPO — percepção, os verbos, o relógio próprio com o 3×, gestação
+  deliberacao.py   pensar sob orçamento, com intenção que atravessa o tempo
+  narrativa.py     o diário: onde os três se mostram a quem assiste
+  microcosmo.py    o indivíduo: os três tecidos numa instância
+  mundo.py         as capitais reais, a malha ferroviária, os lugares
+  livro.py         Sêneca e o Novo Testamento — a única base de conhecimento
+```
+
+```bash
+python3 -m pytest testes/ -q   # 48 testes vivos dos oito axiomas
+python3 viver.py 900           # uma vida no terminal
+streamlit run app.py           # a interface: o tempo, o pensamento, e as dicas
+```
 
 ## Estado da Etapa 1
 

@@ -112,6 +112,54 @@ class Aspiracao:
 
 
 @dataclass
+class Duvida:
+    """Uma pergunta levantada, e ainda sem resposta.
+
+    Não é crença — ele não afirma nada — nem aspiração, porque não é um desejo. É
+    o terceiro estado honesto de uma mente: **saber que não sabe**, com procedência
+    de quem levantou.
+
+    Um humano defeituoso fecha a dúvida com uma resposta inventada. Este a carrega
+    aberta, e ela pesa na coerência até que algo a responda — ou até que ele aceite
+    que talvez nada responda.
+    """
+
+    pergunta: str
+    de_quem: str
+    quando: Instante
+    respondida_por: str | None = None
+
+    @property
+    def aberta(self) -> bool:
+        return self.respondida_por is None
+
+
+@dataclass
+class Fe:
+    """Confiança depositada numa pessoa. **Não é crença** (`10`, §1).
+
+    Não afirma nada sobre o mundo, logo não tem valor de verdade e não é objeto de
+    A4 — pelo mesmo motivo que a aspiração não é. Confiar em alguém e afirmar coisas
+    sobre o mundo são atos diferentes.
+
+    E ela tem de ser dele: nada neste código a deposita. Ela só existe se o próprio
+    indivíduo a depositar, depois de ler e de poder duvidar. Fé forçada não é fé.
+    """
+
+    em_quem: str
+    desde: Instante
+    porque_li: str
+    firmeza: float = 0.5
+
+    @property
+    def confianca(self) -> float:
+        raise A1.violar(
+            f"a fé em {self.em_quem!r} não é uma afirmação sobre o mundo; "
+            "confiar não é crer, e tratar uma como a outra é descalibração"
+        )
+
+
+@dataclass
 class Contradicao:
     """A5: contradição detectada não se esconde — se enfileira."""
 
@@ -174,6 +222,8 @@ class Inteligencia:
         self.crencas: dict[str, Crenca] = {}
         self.aspiracoes: list[Aspiracao] = []
         self.contradicoes: list[Contradicao] = []
+        self.duvidas: list[Duvida] = []
+        self.fe: Fe | None = None
         self.calibracao = Calibracao()
         # T4: modelo de outra mente. Vazio enquanto houver um só, mas existente.
         self.sobre_outros: dict[str, dict[str, Crenca]] = {}
@@ -256,6 +306,24 @@ class Inteligencia:
             key=lambda c: c.prioridade,
             reverse=True,
         )
+
+    def duvidar(self, pergunta: str, de_quem: str, agora: Instante) -> Duvida:
+        """Recebe uma pergunta que não sabe responder. Guarda aberta."""
+        duvida = Duvida(pergunta=pergunta, de_quem=de_quem, quando=agora)
+        self.duvidas.append(duvida)
+        return duvida
+
+    @property
+    def em_aberto(self) -> list[Duvida]:
+        return [d for d in self.duvidas if d.aberta]
+
+    def confiar_em(self, quem: str, porque: str, agora: Instante) -> Fe:
+        """Depositar a confiança. Só o indivíduo chama isto, e só se quiser."""
+        if self.fe is None:
+            self.fe = Fe(em_quem=quem, desde=agora, porque_li=porque)
+        else:
+            self.fe.firmeza = min(1.0, self.fe.firmeza + 0.05)
+        return self.fe
 
     # --------------------------------------------------------------- aspirar
 

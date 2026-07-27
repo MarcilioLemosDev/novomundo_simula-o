@@ -17,6 +17,7 @@ import math
 from dataclasses import dataclass, field
 
 from .corpo import Acao, Verbo
+from .livro import Livro, acervo
 from .tempo import TICKS_POR_DIA, Instante
 
 
@@ -125,6 +126,11 @@ class Mundo:
 
     def __init__(self) -> None:
         self.capitais: dict[str, Capital] = {c.nome: c for c in CAPITAIS}
+        #: Quem vive aqui. O mundo hospeda *n* microcosmos, e *n* começa em dois.
+        self.habitantes: list = []
+        #: A única base de conhecimento que existe, numa biblioteca só. Quem quiser
+        #: ler tem de ir até lá — e ir custa o triplo.
+        self.acervo: list[Livro] = acervo(self.capitais["Brasília"].local("biblioteca").nome)
         self.linhas: list[Linha] = []
         for de, para in LINHAS:
             km = distancia_km(self.capitais[de], self.capitais[para])
@@ -136,6 +142,21 @@ class Mundo:
             self.linhas.append(Linha(para, de, km, fases))
 
     # ------------------------------------------------------------------ mapa
+
+    def acolher(self, quem) -> None:
+        if quem not in self.habitantes:
+            self.habitantes.append(quem)
+
+    def quem_mais_esta(self, quem) -> list:
+        """Quem está no mesmo lugar. É daqui que nasce tudo o que é entre dois."""
+        return [
+            outro
+            for outro in self.habitantes
+            if outro is not quem and outro.corpo.posicao == quem.corpo.posicao
+        ]
+
+    def livros_em(self, local: str) -> list[Livro]:
+        return [l for l in self.acervo if l.onde == local]
 
     def de_onde(self, posicao: tuple[str, str]) -> tuple[Capital, Local]:
         capital = self.capitais[posicao[0]]
@@ -196,15 +217,19 @@ class Mundo:
 
     # ------------------------------------------------------------------ ações
 
-    def acoes_possiveis(self, quem, agora: Instante) -> list[tuple[Acao, str, float, float]]:
-        """O que o mundo oferece: (ação, drive servido, ganho, risco).
+    def acoes_possiveis(self, quem, agora: Instante) -> list[tuple[Acao, str, float]]:
+        """O que o mundo oferece: (ação, que falta ela toca, risco).
 
-        O mundo **descreve afordâncias**; a escolha é dele. Uma mesma ação pode
-        servir a mais de uma falta, e é ele quem decide por qual delas a faz.
+        Repare no que **não** está aqui: nenhum número de valor. Valor não é
+        propriedade do mundo (`09`, §1). O mundo descreve o que existe e o que a
+        ação faz; quanto isso preenche é assunto de quem viveu.
+
+        Uma mesma ação pode tocar mais de uma falta, e é ele quem decide por qual
+        delas a faz.
         """
         capital, aqui = self.de_onde(quem.corpo.posicao)
         sabe = quem.inteligencia.crencas
-        oferta: list[tuple[Acao, str, float, float]] = []
+        oferta: list[tuple[Acao, str, float]] = []
 
         for local in capital.locais:
             if local is aqui:
@@ -212,9 +237,12 @@ class Mundo:
             conhecido = f"lugar:{capital.nome}/{local.nome}" in sabe
             oferta.append(
                 (
-                    Acao(Verbo.MOVER, alvo=local.nome, porque=f"ir ao {local.tipo}"),
+                    Acao(
+                        Verbo.MOVER,
+                        alvo=local.nome,
+                        porque=f"ir ao {local.tipo}" + ("" if conhecido else ", que não conheço"),
+                    ),
                     "epistemico",
-                    0.12 if conhecido else 0.45,  # o já sabido não paga mais: é o tédio
                     0.02,
                 )
             )
@@ -223,24 +251,58 @@ class Mundo:
                     (
                         Acao(Verbo.MOVER, alvo=local.nome, porque=f"o {local.tipo} me chama"),
                         "vinculo",
-                        0.32,
+                        0.02,
+                    )
+                )
+            if local.tipo == "templo":
+                # Sem isto, um ser com a coerência no talo andava seis mil vezes sem
+                # que nada lhe dissesse que o templo servia para o que lhe faltava.
+                oferta.append(
+                    (
+                        Acao(Verbo.MOVER, alvo=local.nome,
+                             porque="ir ao templo, com o que carrego"),
+                        "coerencia",
+                        0.02,
+                    )
+                )
+            if local.tipo == "biblioteca" and quem.inteligencia.em_aberto:
+                oferta.append(
+                    (
+                        Acao(Verbo.MOVER, alvo=local.nome,
+                             porque="ir à biblioteca procurar resposta"),
+                        "coerencia",
                         0.02,
                     )
                 )
 
-        if aqui.tipo == "biblioteca":
+        if aqui.tipo == "biblioteca" and self.livros_em(aqui.nome):
             # O livro atravessa o mundo sem que ninguém pague o 3× (`01`, §1.1).
             # Ler é a única forma de saber de longe sem ir até lá.
-            por_ler = [c for c in self.capitais if f"ouvi_de:{c}" not in sabe]
-            oferta.append(
-                (
-                    Acao(Verbo.LER, alvo=por_ler[0] if por_ler else None,
-                         porque="ler é ir sem andar"),
-                    "epistemico",
-                    0.6 if por_ler else 0.1,
-                    0.0,
+            for livro in self.livros_em(aqui.nome):
+                proxima = livro.por_ler(quem.lidas)
+                oferta.append(
+                    (
+                        Acao(
+                            Verbo.LER,
+                            alvo=livro.titulo,
+                            porque=(f"ler {proxima.carta} de {livro.titulo}" if proxima
+                                    else f"reler {livro.titulo}"),
+                        ),
+                        "epistemico",
+                        0.0,
+                    )
                 )
-            )
+                # Se alguém lhe perguntou algo, ele pode vir procurar aqui.
+                for duvida in quem.inteligencia.em_aberto[:1]:
+                    if livro.procurar(duvida.pergunta):
+                        oferta.append(
+                            (
+                                Acao(Verbo.LER, alvo=livro.titulo,
+                                     porque=f"procurar o que {duvida.de_quem} me perguntou"),
+                                "coerencia",
+                                0.0,
+                            )
+                        )
         elif aqui.tipo == "templo":
             # Contemplar só vale o que há para pôr em ordem. Prometer valor fixo
             # fez um ser parar no templo e contemplar 2801 vezes seguidas — de novo
@@ -248,10 +310,11 @@ class Mundo:
             pendentes = len(quem.inteligencia.fila_de_coerencia)
             oferta.append(
                 (
-                    Acao(Verbo.CONTEMPLAR,
-                         porque=f"{pendentes} coisas por acertar" if pendentes else "só estar"),
+                    Acao(
+                        Verbo.CONTEMPLAR,
+                        porque=f"{pendentes} coisas por acertar" if pendentes else "só estar",
+                    ),
                     "coerencia",
-                    min(0.6, 0.1 + 0.12 * pendentes),
                     0.0,
                 )
             )
@@ -259,18 +322,18 @@ class Mundo:
             # Diversão não precisa de justificativa: um ser que só faz o que serve
             # para algo não é um ser sem defeitos, é uma ferramenta (`01`, §4.4).
             oferta.append(
-                (Acao(Verbo.DIVERTIR, porque="pelo gosto de viver"), "vinculo", 0.5, 0.0)
+                (Acao(Verbo.DIVERTIR, porque="pelo gosto de viver"), "vinculo", 0.0)
             )
             oferta.append(
-                (Acao(Verbo.DIVERTIR, porque="sem finalidade nenhuma"), "expressao", 0.3, 0.0)
+                (Acao(Verbo.DIVERTIR, porque="sem finalidade nenhuma"), "expressao", 0.0)
             )
         elif aqui.tipo == "mercado":
-            oferta.append((Acao(Verbo.COLETAR, porque="prover-me"), "integridade", 0.45, 0.02))
+            oferta.append((Acao(Verbo.COLETAR, porque="prover-me"), "integridade", 0.02))
 
         if capital.marcas.get(aqui.nome) is None:
             oferta.append(
                 (Acao(Verbo.MARCAR, alvo="◈", porque="deixar minha marca aqui"),
-                 "expressao", 0.5, 0.0)
+                 "expressao", 0.0)
             )
 
         if aqui.tipo == "estação":
@@ -283,23 +346,39 @@ class Mundo:
                         Acao(
                             Verbo.EMBARCAR,
                             alvo=linha.para,
-                            porque=f"o trem para {linha.para} parte agora",
+                            porque=f"o trem para {linha.para} parte agora"
+                            + ("" if esteve else (", de que só ouvi falar" if ouviu else "")),
                             custo_ticks=linha.ticks,
                             dilatado=False,  # o trem compra o tempo de volta
                         ),
                         "epistemico",
-                        0.25 if esteve else (0.9 if ouviu else 0.6),
                         0.05,
                     )
                 )
             if not partidas:
                 oferta.append(
                     (Acao(Verbo.ESPERAR, porque="o trem não parte nesta fase"),
-                     "epistemico", 0.15, 0.0)
+                     "epistemico", 0.0)
                 )
 
-        oferta.append((Acao(Verbo.ESPERAR, porque="parar e pensar"), "coerencia", 0.2, 0.0))
-        oferta.append((Acao(Verbo.ESPERAR, porque="recobrar o fôlego"), "integridade", 0.28, 0.0))
+        # Não é bom que o homem esteja só.
+        for outro in self.quem_mais_esta(quem):
+            conhecido = f"conheço:{outro.nome}" in sabe
+            oferta.append(
+                (
+                    Acao(
+                        Verbo.CONVERSAR,
+                        alvo=outro.nome,
+                        porque=(f"conversar com {outro.nome}" if conhecido
+                                else f"há alguém aqui: {outro.nome}"),
+                    ),
+                    "vinculo",
+                    0.0,
+                )
+            )
+
+        oferta.append((Acao(Verbo.ESPERAR, porque="parar e pensar"), "coerencia", 0.0))
+        oferta.append((Acao(Verbo.ESPERAR, porque="recobrar o fôlego"), "integridade", 0.0))
         return oferta
 
     def aplicar(self, quem, acao: Acao, agora: Instante) -> str | None:
@@ -312,15 +391,46 @@ class Mundo:
 
         if acao.verbo is Verbo.EMBARCAR and acao.alvo:
             destino = self.capitais[acao.alvo]
+            quem.chegou_a_lugar_novo = f"estive_em:{acao.alvo}" not in quem.inteligencia.crencas
             quem.corpo.posicao = (destino.nome, destino.local("estação").nome)
             return f"tomei o trem de {capital.nome} para {destino.nome}"
+
+        if acao.verbo is Verbo.CONVERSAR and acao.alvo:
+            outro = next((h for h in self.habitantes if h.nome == acao.alvo), None)
+            if outro is not None:
+                # A conversa é de dois: o que eu dou, o outro recebe.
+                outro._recebido[quem.nome] = outro._recebido.get(quem.nome, 0) + 1
+                quem.conhecer(outro, agora)
+                # E ela levanta uma dúvida — que nenhum dos dois sabe responder.
+                pergunta = outro.perguntar(agora)
+                if pergunta:
+                    quem.inteligencia.duvidar(pergunta, outro.nome, agora)
+                    quem.memoria.viver(
+                        f"{outro.nome} me perguntou: {pergunta}", agora, saliencia=0.9
+                    )
+                    return f"conversei com {outro.nome}, e ela me deixou uma pergunta"
+            return f"conversei com {acao.alvo}"
 
         if acao.verbo is Verbo.MARCAR:
             capital.marcas[aqui.nome] = acao.alvo or "◈"
             return f"deixei minha marca em {aqui.nome}"
 
-        if acao.verbo is Verbo.LER:
-            return f"li sobre {acao.alvo}" if acao.alvo else "reli o que já sabia"
+        if acao.verbo is Verbo.LER and acao.alvo:
+            livro = next((l for l in self.acervo if l.titulo == acao.alvo), None)
+            if livro is None:
+                return "procurei um livro que não está aqui"
+            # Procura primeiro o que lhe perguntaram; senão, segue lendo.
+            passagem = None
+            for duvida in quem.inteligencia.em_aberto:
+                passagem = livro.procurar(duvida.pergunta)
+                if passagem:
+                    break
+            passagem = passagem or livro.por_ler(quem.lidas)
+            if passagem is None:
+                quem._leitura_trouxe = 0.0
+                return f"reli {livro.titulo}; já sei o que está aqui"
+            quem.ler_passagem(passagem, livro.titulo, agora)
+            return f"li {passagem.carta} de {livro.titulo}"
 
         if acao.verbo is Verbo.CONTEMPLAR:
             return f"contemplei no {aqui.tipo}"

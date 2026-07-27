@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from .corpo import Acao, Verbo
 from .crencas import Inteligencia
 from .espirito import A7, Espirito
+from .experiencia import Experiencia
 from .memoria import Memoria
 from .tempo import Instante
 from .vontades import Vontade
@@ -32,10 +33,40 @@ class Opcao:
     ganho_esperado: float
     risco: float
     confianca: float
+    por_experiencia: bool = True
 
     @property
     def valor(self) -> float:
         return self.ganho_esperado * self.confianca
+
+
+@dataclass
+class Intencao:
+    """Uma decisão que ele segura ao longo do tempo.
+
+    Sem isto, ele redecide do zero a cada tick — e um ser que redecide tudo a cada
+    instante não vai a lugar nenhum: anda para o templo, muda de ideia, volta,
+    torna a querer, anda de novo. Foi o que se viu: seis mil passos com o templo
+    debaixo dos pés e nunca lá dentro.
+
+    É a diferença entre reagir e **querer**. Um ser humano forma um propósito e o
+    carrega enquanto ele valer — e o abandona quando deixa de valer, não a cada
+    respiração.
+    """
+
+    para_onde: str
+    por_que: str
+    drive: str
+    formada_em: Instante
+    passos: int = 0
+
+    def ainda_vale(self, vontade, limite: int = 12) -> bool:
+        """Vale enquanto a falta que a gerou continuar apertando, e enquanto não
+        virar teimosia. Persistir para sempre seria outro defeito."""
+        if self.passos >= limite:
+            return False
+        drive = vontade.drives.get(self.drive)
+        return bool(drive and drive.erro > 0.15)
 
 
 @dataclass
@@ -53,6 +84,7 @@ class Decisao:
     atencao_disponivel: int
     concluiu: bool
     pensamento: list[str] = field(default_factory=list)
+    intencao: Intencao | None = None
 
     def porque(self) -> str:
         linhas = [
@@ -86,15 +118,21 @@ class Deliberacao:
         vontade: Vontade,
         inteligencia: Inteligencia,
         memoria: Memoria,
+        experiencia: Experiencia,
+        onde: str,
         atencao: int,
         limiar_risco: float,
-        acoes_possiveis: list[tuple[Acao, str, float, float]],
+        acoes_possiveis: list[tuple[Acao, str, float]],
+        intencao: Intencao | None = None,
     ) -> Decisao:
         """Pesa o possível e escolhe.
 
-        `acoes_possiveis` chega do mundo como (ação, drive servido, ganho, risco).
-        A deliberação não sabe o que é uma célula nem o que é um trem: só sabe pesar
-        o que lhe entregam contra o que ele quer e o que ele crê.
+        `acoes_possiveis` chega do mundo como (ação, drive que a ação toca, risco).
+        **O mundo não diz quanto vale.** Valor não é propriedade do mundo: é o que
+        aquilo já fez por ele, medido na própria carne (`09`, §1).
+
+        A deliberação não sabe o que é uma biblioteca nem o que é um trem. Sabe pesar
+        o que lhe entregam contra o que lhe falta e contra o que ele viveu.
         """
         opcoes: list[Opcao] = []
         gasto = 0
@@ -115,6 +153,23 @@ class Deliberacao:
             fio.append("nada me aperta agora, então posso escolher pelo que vale por si.")
         fio.append(f"tenho atenção para examinar {atencao} caminhos.")
 
+        # ── A INTENÇÃO QUE ELE CARREGA ──────────────────────────────────────
+        # Antes de olhar o que há, ele lembra do que estava indo fazer. Se ainda
+        # vale, segue — porque querer é atravessar o tempo, não recomeçar a cada
+        # instante.
+        if intencao is not None and intencao.ainda_vale(vontade):
+            for acao, drive, risco in acoes_possiveis:
+                if acao.alvo == intencao.para_onde and risco <= limiar_risco:
+                    intencao.passos += 1
+                    fio.append(
+                        f"eu estava indo {intencao.por_que}. ainda quero. sigo — "
+                        f"{intencao.passos}º passo."
+                    )
+                    escolhida = Opcao(acao, drive, 0.0, risco, 0.6, True)
+                    return Decisao(agora, escolhida, [], 1, atencao, True, fio, intencao)
+        elif intencao is not None:
+            fio.append(f"eu ia {intencao.por_que}, mas já não me puxa. deixo pra lá.")
+
         # A atenção é escassa, então **a ordem em que ele olha as opções é dele**,
         # não do mundo. Ele examina primeiro o que serve à falta que mais aperta.
         #
@@ -124,16 +179,40 @@ class Deliberacao:
         # Critério duplo, e os dois são dele: primeiro a falta que mais aperta,
         # depois, dentro dela, o que mais promete. Empate resolvido por posição na
         # lista seria o mundo escolhendo de novo.
-        ordenadas = sorted(
-            acoes_possiveis,
-            key=lambda item: (
-                vontade[item[1]].urgencia if item[1] in vontade.drives else 0.0,
-                item[2],
-            ),
-            reverse=True,
-        )
+        def lembrar_o_quanto_vale(item) -> tuple[float, float]:
+            """A lembrança é barata; deliberar é caro.
 
-        for acao, drive, ganho, risco in ordenadas:
+            Ele **lembra** de relance o que cada coisa costuma lhe fazer — isso não
+            consome atenção — e só examina de perto as mais promissoras. Sem este
+            passo, com atenção baixa, quem escolhia era a ordem da lista: um ser
+            passou 7929 ticks andando entre a praça e o templo sem nunca chegar a
+            olhar o "divertir-se" que estava logo abaixo na lista.
+            """
+            acao, drive, _risco = item
+            urgencia = vontade[drive].urgencia if drive in vontade.drives else 0.0
+            # O alvo faz parte da experiência: ler Sêneca não é ler o Evangelho, e
+            # conversar com ela não é conversar com qualquer um.
+            chave = (acao.verbo.value, acao.alvo or onde)
+            if experiencia.conhece(chave):
+                promessa = sum(
+                    q * vontade[d].erro * vontade[d].ganho
+                    for d, q in experiencia.esperado(chave).items()
+                    if d in vontade.drives
+                )
+            else:
+                # O que ele nunca provou chama pela curiosidade, e chama forte.
+                promessa = vontade["epistemico"].erro * vontade["epistemico"].ganho * 0.5
+
+            # Empatados, ele prefere o ato que **chega** ao que apenas caminha para
+            # lá. Andar até o templo e contemplar servem à mesma falta, mas só um
+            # dos dois a resolve. Sem isto, um ser com a coerência no talo andava
+            # seis mil vezes com o templo debaixo dos pés.
+            chega_ao_fim = acao.verbo is not Verbo.MOVER
+            return (urgencia, promessa, chega_ao_fim)
+
+        ordenadas = sorted(acoes_possiveis, key=lembrar_o_quanto_vale, reverse=True)
+
+        for acao, drive, risco in ordenadas:
             if gasto >= atencao:
                 # A7: acabou o orçamento. Ele não pensa pior — apenas para de pensar,
                 # e vai saber que parou.
@@ -152,10 +231,30 @@ class Deliberacao:
                 continue
 
             urgencia = vontade[drive].urgencia if drive in vontade.drives else 0.0
-            # A confiança vem do que ele **crê** sobre a ação dar certo — e, se não
-            # crê nada a respeito, é honestamente baixa. Nunca inventada.
-            crenca = inteligencia.crencas.get(f"{acao.verbo.value}:{acao.alvo}")
-            confianca = crenca.confianca if crenca else 0.5
+
+            # ── A RECOMPENSA REAL ────────────────────────────────────────────
+            # Não há número vindo do mundo. O que ele espera ganhar é o que esta
+            # ação, neste lugar, já baixou das faltas que ele tem AGORA.
+            chave = (acao.verbo.value, acao.alvo or onde)
+            ja_vivido = experiencia.esperado(chave)
+            por_experiencia = experiencia.conhece(chave)
+
+            if por_experiencia:
+                ganho = sum(
+                    queda * vontade[d].erro * vontade[d].ganho
+                    for d, queda in ja_vivido.items()
+                    if d in vontade.drives
+                )
+                # Confiança = quanto ele já viu disto. Pouca amostra, pouca certeza.
+                # É A4 nascendo da experiência em vez de ser declarada por nós.
+                vezes = experiencia.vezes(chave)
+                confianca = min(0.95, 0.35 + 0.12 * vezes)
+            else:
+                # Nunca tentou. Não sabe se presta — e **não saber é uma falta**.
+                # É por isto que ele experimenta o novo: não por bônus de exploração
+                # que nós demos, mas porque ignorar dói de verdade nele.
+                ganho = vontade["epistemico"].erro * vontade["epistemico"].ganho * 0.5
+                confianca = 0.5
 
             # Hábito que já funcionou empurra a confiança, mas só até onde os
             # acertos observados justificam. A4 não deixa passar disso.
@@ -178,7 +277,13 @@ class Deliberacao:
 
             fio.append(
                 f"considero {acao.verbo.value}{' ' + acao.alvo if acao.alvo else ''}"
-                f" — {acao.porque}. serve {drive}, promete {ganho:.2f}, confio {confianca:.0%}."
+                f" — {acao.porque}. "
+                + (
+                    f"das outras vezes isto me baixou {sum(ja_vivido.values()):.2f} de falta; "
+                    f"do jeito que estou hoje, valeria {ganho:.2f}."
+                    if por_experiencia
+                    else "nunca tentei. não sei o que me faz — e é justamente por isso."
+                )
             )
 
             opcoes.append(
@@ -189,9 +294,10 @@ class Deliberacao:
                     # quando nada aperta, ele não congela: o piso de 0,15 deixa o
                     # valor bruto decidir, e é assim que um ser em paz vai à praça
                     # se divertir — sem finalidade, porque ama viver (`01`, §1.1).
-                    ganho_esperado=ganho * (0.15 + urgencia),
+                    ganho_esperado=ganho,
                     risco=risco,
                     confianca=confianca,
+                    por_experiencia=por_experiencia,
                 )
             )
 
@@ -226,9 +332,22 @@ class Deliberacao:
             f"{escolhida.acao.porque}."
         )
 
+        # Se o que ele decidiu foi *ir* a algum lugar, isso vira propósito e ele o
+        # carrega. Não é um plano elaborado: é a teimosia mínima que separa querer
+        # de reagir.
+        nova = None
+        if escolhida.acao.verbo is Verbo.MOVER and escolhida.acao.alvo:
+            nova = Intencao(
+                para_onde=escolhida.acao.alvo,
+                por_que=escolhida.acao.porque,
+                drive=escolhida.drive_servido,
+                formada_em=agora,
+            )
+            fio.append(f"e guardo isto como propósito: {escolhida.acao.porque}.")
+
         self._espirito.exigir(
             A7,
             0.0 <= escolhida.confianca <= 1.0,
             "a deliberação produziu confiança inválida",
         )
-        return Decisao(agora, escolhida, descartadas, gasto, atencao, concluiu, fio)
+        return Decisao(agora, escolhida, descartadas, gasto, atencao, concluiu, fio, nova)

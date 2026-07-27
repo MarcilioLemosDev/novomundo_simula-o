@@ -32,6 +32,7 @@ class Verbo(Enum):
     LER = "ler"
     CONTEMPLAR = "contemplar"
     DIVERTIR = "divertir-se"
+    CONVERSAR = "conversar"
 
     @property
     def custa_dilatado(self) -> bool:
