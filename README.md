@@ -16,12 +16,23 @@ introduzido num mapa 2D regido por calendário lunar.
 ## A pedra
 
 - [`docs/00-metodo.md`](docs/00-metodo.md) — as três etapas e o que vale em cada uma
-- [`docs/01-pedra-fundamental.md`](docs/01-pedra-fundamental.md) — o indivíduo, o que "sem defeitos" significa, os oito axiomas, as seis camadas
-- [`docs/02-tempo-lunar.md`](docs/02-tempo-lunar.md) — o vetor tempo e a deriva
-- [`docs/03-mapa-escopo-inicial.md`](docs/03-mapa-escopo-inicial.md) — o mundo 2D e os cinco verbos
+- [`docs/01-pedra-fundamental.md`](docs/01-pedra-fundamental.md) — o indivíduo, o que "sem defeitos" significa, os oito axiomas, as seis camadas, os três canais de dica, idade sem morte
+- [`docs/02-tempo-lunar.md`](docs/02-tempo-lunar.md) — o vetor tempo, a dilatação 3× por movimento, as duas derivas
+- [`docs/03-mapa-escopo-inicial.md`](docs/03-mapa-escopo-inicial.md) — o mundo 2D, o trem, os cinco verbos
 - [`docs/04-tensoes-abertas.md`](docs/04-tensoes-abertas.md) — o que ainda não sobreviveu ao estresse
+- [`docs/05-norte.md`](docs/05-norte.md) — o destino declarado, que decide o que não pode ser fechado
+
+## O mundo, em resumo
+
+Mapa 2D interconectado por trem. Calendário lunar com dias. Movimento custa 3× em tempo.
+Os seres têm idade e **não morrem**. Constrói-se um indivíduo completo e depois se espelha,
+sendo homem/mulher a única diferenciação.
 
 ## Estado da Etapa 1
 
-Falta ratificar: T3 (o que "neural" significa aqui) e T4 (um indivíduo ou uma espécie).
-Ambas mudam a Etapa 2 inteira. Ver `docs/04-tensoes-abertas.md`.
+**Gravado na pedra:** substrato híbrido (T3) · um indivíduo com interface do outro pronta
+(T4) · falta e nunca angústia (T5) · idade sem morte · três canais de dica.
+
+**Ainda aberto:** T1 (integridade sem medo) · T2 (ratificar crença × aspiração) ·
+T6 (quem julga a calibração) · T7 (vínculo sem carência) · T8.1 (há reprodução?) ·
+T9 (o que faz uma conversa ser real) · dois relógios (`02`, §2.1).

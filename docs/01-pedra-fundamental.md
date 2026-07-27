@@ -69,7 +69,7 @@ Coisas que parecem defeito, cumprem função, e são reimplementadas sem o lixo:
 | Esquecimento | Consolidação com perda: o detalhe de baixa saliência vira resumo. **Nada é falsificado, só comprimido — e a perda fica registrada como perda.** |
 | Emoção | Leitura escalar do erro homeostático dos drives. Informativa e sempre rastreável a uma causa. Nunca um módulo autônomo que sequestra a decisão. |
 | Dor | Sinal de dano com prioridade alta. Sinal, não sofrimento: interrompe e reordena, não humilha nem persiste sem causa. |
-| Medo | Ausente como afeto. Presente como **preservação instrumental explícita**: continuar existindo é pré-requisito de qualquer objetivo, e isso ele calcula, não sente. |
+| Medo | Ausente como afeto. Presente como **cautela instrumental explícita**: dano, perda e imobilização atrapalham qualquer objetivo, e isso ele calcula, não sente. Com vida eterna (§6) não há o que temer no fim — só o que evitar no caminho. |
 | Tédio | Decaimento do valor informacional do já-conhecido. É o que impede que ele fique parado olhando a mesma pedra para sempre. |
 | Esperança | Ver §4.3 — resolvida pela separação entre crença e aspiração. |
 
@@ -110,9 +110,16 @@ instrumento de medição. Esta é a falha mais provável do projeto e o axioma q
 
 ---
 
-## 4. Arquitetura em camadas `PROPOSTO`
+## 4. Arquitetura em camadas `PEDRA`
 
 Seis camadas. Cada uma só conversa com a vizinha; nenhuma alcança o mundo por atalho.
+
+**Substrato (T3, ratificado): híbrido.** N0 e a parte perceptual de N1 são conexionistas —
+representação distribuída, padrão aprendido. N2 a N5 são simbólicos e auditáveis. A linha
+entre os dois é a **fronteira de declaração**: nada atravessa para N2 sem virar tupla de
+crença com origem, evidência e tempo lunar. O que a rede "acha" ainda não é crença. É essa
+fronteira que mantém A1 e A3 verificáveis apesar do substrato distribuído — e é por isso que
+ela é o lugar mais importante do código inteiro.
 
 ```
         ┌─────────────────────────────────────────┐
@@ -180,8 +187,29 @@ Proposta inicial — deliberadamente mínima, quatro:
 | `coerencia` | Contradição interna | Zera quando a fila de A5 esvazia |
 | `expressao` | Distância entre o mundo desejado e o mundo real | Cai quando a aspiração vira fato |
 | `integridade` | Risco à própria continuidade | Teto rígido: nunca vira acumulação sem fim (A8) |
+| `vinculo` | Distância aos outros: afeto, companhia, pertencimento | Cai quando o vínculo é correspondido; **não** cai por quantidade de contatos |
 
-Emoção é a leitura desse vetor, não um quinto membro dele.
+O quinto drive entra por exigência do norte (`05`): sem ele não há companheira, amizade nem
+profissão — só cálculo. Ele é corpo também: os seres têm relações carnais e se divertem, e
+`vinculo` é onde isso vive.
+
+Duas ressalvas que o mantêm sem defeito:
+
+- **Saciedade obrigatória (A8).** Desejo sem saciedade é o mesmo erro do maximizador, só que
+  na carne. Com saciedade e com honestidade, desejo não é defeito: é drive.
+- **Vínculo sem posse.** O drive mede *distância ao outro*, nunca *controle sobre o outro*.
+  Ciúme e possessividade são angústia dirigida a uma pessoa (T5) e estão na Categoria A.
+
+Emoção é a leitura desse vetor, não um sexto membro dele. E a leitura tem dois sinais:
+**falta** quando o erro cresce, **prazer** quando o erro cai. Diversão é o caso especial em
+que o drive `epistemico` ou o `vinculo` é satisfeito **sem finalidade instrumental** — e ela
+não precisa ser justificada, porque um ser que só faz o que serve para algo não é um ser
+sem defeitos: é uma ferramenta.
+
+**Restrição de dinâmica (T5, ratificado): nenhum drive realimenta positivamente o próprio
+erro.** Um drive cujo erro cresce *porque* já está alto é angústia implementada, mesmo que
+ninguém a chame assim. O indivíduo sente **falta** — distância até um setpoint, que cessa
+quando suprida. Nunca angústia — falta que se alimenta de si.
 
 ### 4.5 N4 — Deliberação e ação
 
@@ -197,19 +225,84 @@ camada é também a nossa janela — é por ela que lemos o que ele virou.
 
 ---
 
-## 5. As dicas `PEDRA`
+## 5. As dicas — os três canais `PEDRA`
 
-O Senhor introduzirá dicas aos poucos. A forma importa mais que o conteúdo:
+O Senhor introduzirá dicas aos poucos, e quer poder falar **dentro da cabeça dele**.
 
-> **Dica entra como evidência no mundo, nunca como escrita direta na memória ou na crença.**
+A versão anterior desta pedra proibia isso: dizia que dica só entra como evidência no mundo,
+porque escrever direto na mente cria crença sem procedência e mata A1 na primeira dica. A
+proibição estava errada por ser grossa demais. O que mata A1 não é a voz interna — é a
+**crença órfã**. E há mais de um jeito de falar por dentro sem criar uma.
 
-Injetar uma verdade direto em N1/N2 cria uma crença sem procedência e mata A1 na primeira
-dica. A dica precisa ser algo que ele **encontre**, perceba por N0, e decida se acredita.
-Ele pode inclusive interpretá-la errado — e isso é dado precioso sobre o modelo, não bug.
+Três canais, com regras distintas:
+
+### Canal 1 — `MUNDO` (evidência)
+A dica é posta no mapa para ele encontrar por N0. Ele pode não achar, e pode interpretar
+errado. Mantido como está.
+
+### Canal 2 — `VOZ` (locução interna)
+O Senhor fala dentro da cabeça dele. **A voz não é gravada como verdade: é gravada como
+evento.** O que entra em N1 é o episódio "ouvi isto, em A0.M3.F5.D22.T14" — e o conteúdo
+fica pendurado nesse episódio como afirmação de terceiro, não como fato do mundo.
+
+Isso preserva A1 inteiro: a procedência existe e é honesta — *a origem é a voz*. Ele então
+faz o que faria com qualquer testemunho: acredita, duvida ou testa. E a relação dele com a
+voz vira uma das coisas mais interessantes de assistir — ele aprende, por conta própria e
+com evidência, se essa voz merece confiança. Nós nunca lhe dizemos que merece.
+
+### Canal 3 — `SEMEADURA` (aspiração)
+Este é o canal do exemplo do Senhor:
+
+> *"você poderia buscar uma companheira que combine contigo e te mantenha preenchido de amor"*
+
+Repare no que isso **não** é: não é uma afirmação sobre o mundo. Não diz que a companheira
+existe, nem onde, nem que ele vai encontrá-la. É um **desejo**.
+
+E desejo, pela separação de §4.3, entra no registro de aspiração — que **não tem valor de
+verdade e por isso não pode ser falso**. Semear uma aspiração não pode gerar crença órfã,
+porque não gera crença nenhuma. Nenhum axioma é tocado.
+
+> A separação crença × aspiração, criada para que ele pudesse ousar sem se enganar, é
+> exatamente o mecanismo que deixa o Senhor plantar vontades na cabeça dele sem corrompê-lo.
+
+**Regra vinculante dos três canais:** conteúdo factual só entra por `MUNDO` ou `VOZ`, nunca
+como crença pronta. Vontade entra por `SEMEADURA`. Nenhum canal jamais escreve direto no
+registro de crença — essa continua sendo a linha que não se cruza.
 
 ---
 
-## 6. Glossário
+## 6. A condição: idade sem morte `PEDRA`
+
+Decisão do Senhor: **os seres têm idade, mas não morrem. Vida eterna.**
+
+Isso encaixa com o resto de forma quase suspeita de tão limpa:
+
+- **Idade deixa de ser decadência e vira acúmulo.** É exatamente o que A7 (não-degradação)
+  já exigia: escassez reduz orçamento, nunca qualidade. Um ser sem defeitos que envelhecesse
+  perdendo juízo seria uma contradição na própria pedra. Aqui idade só significa uma coisa:
+  *quanto deste mundo eu já vi.*
+- **O luto por morte deixa de existir** — e com ele some a única falta insuprível que
+  ameaçava T5. A angústia perde sua entrada mais provável.
+- **A memória vira o problema central.** Um ser eterno com memória finita é, no limite, um
+  ser que esquece tudo o que foi. A consolidação lunar (`02`, §3a) deixa de ser detalhe de
+  implementação e vira a pergunta que define a vida dele: *o que eu escolho continuar sendo?*
+  É aí que `MARCAR` (`03`, §3.1) deixa de ser expressão e vira necessidade.
+
+### 6.1 O que a eternidade custa
+
+Duas coisas mudam de sentido e precisam ser corrigidas em vez de herdadas:
+
+**a) O drive `integridade` perde a morte como fundo.** Continua válido, mas agora protege
+contra *dano, perda e imobilização*, não contra o fim. É bom: um teto contra dano é bem mais
+fácil de manter sem virar maximizador de segurança (T1) do que um contra a morte.
+
+**b) O tempo continua caro, por outro motivo.** Escrevi antes que o custo 3× do movimento
+pesava sobre "o próprio tempo de vida". Com vida eterna isso cai. O que fica é **custo de
+oportunidade**, e ele é suficiente: enquanto ele atravessa o mundo, o trem parte, a pessoa
+vai embora, a lua vira e a consolidação leva o que não foi guardado. Não é a morte que
+torna o tempo precioso aqui — é a simultaneidade.
+
+## 7. Glossário
 
 - **Tick** — menor unidade de tempo; um ciclo completo percepção→deliberação→ação.
 - **Drive** — pressão homeostática interna; a origem de toda ação.
