@@ -21,6 +21,7 @@ introduzido num mapa 2D regido por calendário lunar.
 - [`docs/03-mapa-escopo-inicial.md`](docs/03-mapa-escopo-inicial.md) — o mundo 2D, o trem, os cinco verbos
 - [`docs/04-tensoes-abertas.md`](docs/04-tensoes-abertas.md) — o que ainda não sobreviveu ao estresse
 - [`docs/05-norte.md`](docs/05-norte.md) — o destino declarado, que decide o que não pode ser fechado
+- [`docs/06-prior-arte.md`](docs/06-prior-arte.md) — o que já existe no mundo, o que serve e o que contamina
 
 ## O mundo, em resumo
 
