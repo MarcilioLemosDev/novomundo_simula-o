@@ -210,22 +210,50 @@ reprodução perde a função de continuidade da espécie. Então sexo aqui é: 
 vínculo, prazer e diversão — o drive `vinculo` de `01`, §4.4. Legítimo e suficiente. Mas
 tem que ser dito, senão a diferenciação vira etiqueta sem consequência.
 
-### T8.1 — Há reprodução? `TENSÃO — decisão do Senhor`
+### T8.1 — Há reprodução? `PEDRA — ratificado pelo Senhor`
 
-A única pergunta que a vida eterna deixou em aberto, e ela é séria:
+> **Decisão: há reprodução.** O freio é o **bom senso** — como todo humano sabe, uma, duas,
+> três vezes; ninguém passa o dia reproduzindo. E a mulher leva **nove meses** para dar à luz.
 
-- **Se não há reprodução:** a população é fixa e o mundo é um elenco fechado de imortais que
-  se conhecem cada vez melhor. Limpo, estável, e profundamente interessante de assistir a
-  longo prazo — o problema deles vira *o que fazer com o tempo infinito*.
-- **Se há reprodução:** vida eterna somada a nascimento é **crescimento sem teto**. Não é
-  detalhe de balanceamento: em horizonte longo, quebra a simulação. Precisaria de um freio
-  explícito (raridade deliberada, custo altíssimo, ou limite do mundo) — e todo freio que
-  eu consiga imaginar é arbitrário, o que fere o princípio de `05`, §5.
+#### O bom senso não é regra nossa — é A8
 
-**Recomendação: sem reprodução na primeira população.** Espelhar o indivíduo já dá o
-elenco, a diferenciação sexual já dá o vínculo, e a cultura horizontal já dá a transmissão.
-Nascimento é a única peça que não é necessária para o norte e que traz um problema sem
-solução elegante.
+O ponto que faz esta decisão funcionar: **bom senso não precisa ser escrito.** Se o
+escrevêssemos como limite arbitrário, feriríamos `05`, §5 — seria teatro.
+
+Mas ele já está na pedra. **A8 exige que todo drive tenha saciedade e teto.** Um drive de
+reprodução sem teto seria a mesma falha do maximizador epistêmico, só que na carne — e A8
+foi ratificado justamente para barrá-la. Logo o "uma, duas, três vezes" do Senhor não é uma
+exceção que abrimos: é A8 aplicado a mais um drive, como já vale para todos os outros.
+
+E há um segundo freio, que também não escrevemos: **o filho custa caro.** O verdadeiro
+limitador da reprodução humana nunca foi a biologia — foi o custo de criar. Neste mundo, em
+que o movimento custa 3× e o tempo é a moeda escassa (`01`, §6.1), uma criança é um
+investimento longo e pesado exatamente daquilo que mais falta. O indivíduo terá poucos
+filhos **porque conclui que deve**, não porque nós o proibimos — e essa conclusão fica no
+diário, auditável, para o Senhor assistir.
+
+#### O número que decide: 2 é o fio da navalha
+
+Com vida eterna, a conta é diferente da humana e precisa ser dita.
+
+Seja `k` o número médio de filhos por casal ao longo da vida — e a vida aqui é infinita.
+Cada geração é `k/2` vezes a anterior, e a população total é a soma de todas, pois nenhuma
+sai:
+
+```
+população = N₀ / (1 − k/2)        se k < 2
+```
+
+- **k < 2** (menos de dois filhos por casal, para sempre) → a população **converge**.
+  Com k = 1, estabiliza em 2×N₀. Com k = 1,5, em 4×N₀. Mundo finito e estável.
+- **k = 2** → crescimento linear e sem teto, porém lento.
+- **k > 2** → crescimento geométrico. Em horizonte longo, quebra a simulação.
+
+O "uma, duas, três" do Senhor cai exatamente em cima do fio. **Se o teto de saciedade do
+drive de reprodução ficar abaixo de dois filhos por casal, este mundo é eterno e finito ao
+mesmo tempo — e não precisamos de freio nenhum além do que A8 já obriga.** Em três, precisa.
+
+Recomendo mirar `k` abaixo de 2 e deixar o resto emergir do custo do filho.
 
 ---
 

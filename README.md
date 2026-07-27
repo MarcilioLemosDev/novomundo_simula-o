@@ -22,12 +22,14 @@ introduzido num mapa 2D regido por calendário lunar.
 - [`docs/04-tensoes-abertas.md`](docs/04-tensoes-abertas.md) — o que ainda não sobreviveu ao estresse
 - [`docs/05-norte.md`](docs/05-norte.md) — o destino declarado, que decide o que não pode ser fechado
 - [`docs/06-prior-arte.md`](docs/06-prior-arte.md) — o que já existe no mundo, o que serve e o que contamina
+- [`docs/07-arquetipos-e-temperamentos.md`](docs/07-arquetipos-e-temperamentos.md) — a variação entre indivíduos pelo signo
 
 ## O mundo, em resumo
 
 Mapa 2D interconectado por trem. Calendário lunar com dias. Movimento custa 3× em tempo.
-Os seres têm idade e **não morrem**. Constrói-se um indivíduo completo e depois se espelha,
-sendo homem/mulher a única diferenciação.
+Os seres têm idade e **não morrem**. Há reprodução, com gestação de nove meses lunares.
+A sociedade começa com dois e se multiplica. Constrói-se um modelo de indivíduo e depois se
+espelha; a diferenciação é sexo e temperamento por signo.
 
 ## Estado da Etapa 1
 
@@ -35,5 +37,5 @@ sendo homem/mulher a única diferenciação.
 (T4) · falta e nunca angústia (T5) · idade sem morte · três canais de dica.
 
 **Ainda aberto:** T1 (integridade sem medo) · T2 (ratificar crença × aspiração) ·
-T6 (quem julga a calibração) · T7 (vínculo sem carência) · T8.1 (há reprodução?) ·
-T9 (o que faz uma conversa ser real) · dois relógios (`02`, §2.1).
+T6 (quem julga a calibração) · T7 (vínculo sem carência) · T9 (o que faz uma conversa ser
+real) · dois relógios (`02`, §2.1) · o risco social do signo (`07`, §6).
