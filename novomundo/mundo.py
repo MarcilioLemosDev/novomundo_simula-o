@@ -241,7 +241,7 @@ class Mundo:
                     Acao(
                         Verbo.MOVER,
                         alvo=local.nome,
-                        porque=f"ir ao {local.tipo}" + ("" if conhecido else ", que não conheço"),
+                        porque=f"ir à {local.nome}" + ("" if conhecido else ", que não conheço"),
                     ),
                     "epistemico",
                     0.02,
@@ -250,7 +250,7 @@ class Mundo:
             if local.tipo in ("praça", "templo"):
                 oferta.append(
                     (
-                        Acao(Verbo.MOVER, alvo=local.nome, porque=f"o {local.tipo} me chama"),
+                        Acao(Verbo.MOVER, alvo=local.nome, porque=f"a {local.nome} me chama"),
                         "vinculo",
                         0.02,
                     )
@@ -410,7 +410,7 @@ class Mundo:
 
         if acao.verbo is Verbo.MOVER and acao.alvo:
             quem.corpo.posicao = (capital.nome, acao.alvo)
-            return f"andei até o {self.de_onde(quem.corpo.posicao)[1].tipo}"
+            return f"andei até a {self.de_onde(quem.corpo.posicao)[1].nome}"
 
         if acao.verbo is Verbo.EMBARCAR and acao.alvo:
             destino = self.capitais[acao.alvo]
@@ -489,13 +489,13 @@ class Mundo:
             return f"li {passagem.carta} de {livro.titulo}"
 
         if acao.verbo is Verbo.CONTEMPLAR:
-            return f"contemplei no {aqui.tipo}"
+            return f"contemplei no {aqui.nome}"
 
         if acao.verbo is Verbo.DIVERTIR:
-            return f"me diverti na {aqui.tipo}"
+            return f"me diverti na {aqui.nome}"
 
         if acao.verbo is Verbo.COLETAR:
-            return f"me provi no {aqui.tipo}"
+            return f"me provi no {aqui.nome}"
 
         return None
 

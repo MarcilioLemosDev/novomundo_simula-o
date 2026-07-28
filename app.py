@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """A interface: o Senhor vendo o mundo dele correr.
 
-    pip install streamlit
-    streamlit run app.py
+    py -m streamlit run app.py     (Windows)
+    streamlit run app.py           (Mac e Linux)
 
-Mostra o correr do tempo lunar, o pensamento e as ações de cada um, e tem onde
-introduzir as dicas pelos três canais (`01`, §5).
+O que se vê aqui não é um log: é o indivíduo (`05`, §1). Cada pensamento mostrado
+foi escrito pelo mesmo laço que decidiu — por A3, não há como ele pensar uma coisa
+e nos mostrar outra.
 
-O que se vê aqui não é um log: é o indivíduo (`05`, §1). Cada linha de pensamento
-foi escrita pelo mesmo laço que decidiu, com os mesmos números — por A3 não há como
-ele pensar uma coisa e nos mostrar outra.
+A regra desta tela: **o essencial à vista, o técnico escondido.** Quem abre quer ver
+o boneco vivendo, não um painel de instrumentos.
 """
 
 from __future__ import annotations
@@ -24,8 +24,14 @@ from novomundo.tempo import TICKS_POR_MES_LUNAR
 
 st.set_page_config(page_title="Novo Mundo", page_icon="🌙", layout="wide")
 
+MAXIMO_POR_RODAGEM = 10_000
+MAXIMO_DA_VIDA = 600_000
 
-# ───────────────────────────────────────────────────────────── o mundo
+FASES = ["🌑 lua nova", "🌒 crescente", "🌓 quarto crescente", "🌔 gibosa crescente",
+         "🌕 lua cheia", "🌖 gibosa minguante", "🌗 quarto minguante", "🌘 minguante"]
+
+
+# ─────────────────────────────────────────────────────────────── o mundo
 
 def nascer():
     mundo = Mundo()
@@ -34,273 +40,215 @@ def nascer():
     eva = Microcosmo("Eva", Sexo.MULHER, Signo.PEIXES, inicio, posicao=mundo.onde_comeca())
     mundo.acolher(adao)
     mundo.acolher(eva)
-    # O escopo obrigatório: duas horas semanais de busca de conhecimento. Ele pode
-    # não cumprir — e o que isso gera é incoerência, nunca culpa (`09`, §1).
     for ser in (adao, eva):
         ser.assumir(duas_horas_de_estudo(inicio), inicio)
     return mundo, [adao, eva], 0
 
 
-if "cronista" not in st.session_state:
+if "mundo" not in st.session_state:
+    st.session_state.mundo, st.session_state.seres, st.session_state.tick = nascer()
     st.session_state.cronista = Cronista()
     st.session_state.serpente = Serpente()
 
-
-if "mundo" not in st.session_state:
-    st.session_state.mundo, st.session_state.seres, st.session_state.tick = nascer()
-
-mundo = st.session_state.mundo
-seres = st.session_state.seres
-
-
-#: Teto por rodagem e teto da vida do mundo, por ordem do Senhor.
-MAXIMO_POR_RODAGEM = 10_000
-MAXIMO_DA_VIDA = 600_000
+mundo, seres = st.session_state.mundo, st.session_state.seres
+agora = Instante(st.session_state.tick)
 
 
 def correr(quantos: int) -> None:
     quantos = min(quantos, MAXIMO_POR_RODAGEM, MAXIMO_DA_VIDA - st.session_state.tick)
     for _ in range(max(0, quantos)):
-        agora = Instante(st.session_state.tick)
+        instante = Instante(st.session_state.tick)
         for ser in seres:
-            ser.viver_um_tick(mundo, agora)
-        st.session_state.cronista.observar(seres, agora)
+            ser.viver_um_tick(mundo, instante)
+        st.session_state.cronista.observar(seres, instante)
         st.session_state.tick += 1
 
 
-# ───────────────────────────────────────────────────────── o correr do tempo
-
-agora = Instante(st.session_state.tick)
-fase = ["nova", "crescente", "quarto crescente", "gibosa crescente",
-        "cheia", "gibosa minguante", "quarto minguante", "minguante"][agora.fase]
+# ────────────────────────────────────────────────────── o correr do tempo
 
 st.title("🌙 Novo Mundo")
 
-t1, t2, t3, t4, t5 = st.columns(5)
-t1.metric("tempo lunar", str(agora))
-t2.metric("lua", fase, f"{agora.luminosidade:.0%} iluminada")
-t3.metric("ano lunar", f"{agora.tick / TICKS_POR_MES_LUNAR / 12 / 24:.2f}")
-t4.metric("tick do mundo", f"{agora.tick:,}".replace(",", "."))
-t5.metric("habitantes", len(seres))
+esquerda, direita = st.columns([3, 2])
+esquerda.markdown(f"### {FASES[agora.fase]} · dia {agora.dia + 1} do {agora.mes + 1}º mês")
+direita.markdown(f"### {agora.tick / TICKS_POR_MES_LUNAR / 12 / 24:.1f} anos de mundo")
 
-st.divider()
-
-# ───────────────────────────────────────────────────────────── controles
+# ────────────────────────────────────────────────────────────── controles
 
 with st.sidebar:
-    st.header("O correr do tempo")
+    st.markdown("## ▶ Deixar viver")
     passo = st.select_slider(
-        "quanto correr", [1, 6, 24, 100, 500, 2000, 5000, 10000], value=24
+        "por quanto tempo",
+        options=[1, 24, 168, 720, 2000, 10000],
+        value=720,
+        format_func=lambda t: {
+            1: "1 hora", 24: "1 dia", 168: "1 semana",
+            720: "1 mês", 2000: "3 meses", 10000: "1 ano",
+        }[t],
     )
     restam = MAXIMO_DA_VIDA - st.session_state.tick
     if restam <= 0:
-        st.error(f"o mundo chegou ao seu limite de {MAXIMO_DA_VIDA:,} ticks.".replace(",", "."))
-    elif st.button(f"▶ correr {min(passo, restam):,} ticks".replace(",", "."),
-                   use_container_width=True, type="primary"):
-        with st.spinner(f"vivendo {min(passo, restam):,} ticks…".replace(",", ".")):
+        st.error("o mundo chegou ao fim do tempo que lhe foi dado.")
+    elif st.button("deixar viver", use_container_width=True, type="primary"):
+        with st.spinner("vivendo…"):
             correr(passo)
         st.rerun()
-    st.caption(
-        f"até {MAXIMO_POR_RODAGEM:,} por rodagem · "
-        f"{st.session_state.tick:,} de {MAXIMO_DA_VIDA:,} vividos "
-        f"({st.session_state.tick / MAXIMO_DA_VIDA:.1%})".replace(",", ".")
-    )
+
     st.progress(min(1.0, st.session_state.tick / MAXIMO_DA_VIDA))
-    if st.button("↺ recomeçar o mundo", use_container_width=True):
-        st.session_state.mundo, st.session_state.seres, st.session_state.tick = nascer()
+    st.caption(f"{st.session_state.tick:,} de {MAXIMO_DA_VIDA:,} horas".replace(",", "."))
+
+    if st.button("↺ recomeçar do princípio", use_container_width=True):
+        for chave in ("mundo", "seres", "tick", "cronista", "serpente"):
+            st.session_state.pop(chave, None)
         st.rerun()
 
     st.divider()
-    st.header("A serpente")
-    st.caption(
-        "Ela não obriga e não força. **Põe a dúvida** — e uma pergunta não se "
-        "refuta, só se carrega. A explicação que ela oferece entra com confiança "
-        "baixa e origem declarada: ele saberá de quem veio."
-    )
-    a_quem_serpente = st.selectbox("a quem sussurrar", [s.nome for s in seres], key="serp")
-    qual = st.selectbox(
-        "o que sussurrar",
-        range(len(SUSSURROS)),
-        format_func=lambda i: SUSSURROS[i].pergunta,
-    )
-    if st.button("🐍 sussurrar", use_container_width=True):
-        quem = next(s for s in seres if s.nome == a_quem_serpente)
-        dito = st.session_state.serpente.sussurrar(quem, agora, qual)
-        st.warning(f"a serpente disse a {a_quem_serpente}: “{dito.explicacao}”")
-        st.rerun()
-
-    st.divider()
-    st.header("As dicas")
-    st.caption(
-        "Três canais, e a diferença entre eles é a pedra do projeto. **Nenhum** "
-        "escreve crença pronta na cabeça dele."
-    )
+    st.markdown("## 🌱 Falar com eles")
     a_quem = st.selectbox("a quem", [s.nome for s in seres])
     canal = st.radio(
-        "canal",
+        "de que jeito",
         ["semeadura", "voz", "mundo"],
         format_func=lambda c: {
-            "semeadura": "🌱 semeadura — plantar uma vontade",
-            "voz": "🗣 voz — falar dentro da cabeça dele",
-            "mundo": "🌍 mundo — deixar algo para ele achar",
+            "semeadura": "plantar uma vontade",
+            "voz": "falar dentro da cabeça",
+            "mundo": "deixar algo para achar",
         }[c],
     )
     st.caption(
         {
-            "semeadura": "Um desejo. Não afirma nada sobre o mundo, logo não pode ser "
-            "falso — é assim que o Senhor planta vontade sem corromper.",
-            "voz": "Vira **episódio**, não verdade: fica registrado que uma voz disse "
-            "isto, e ele decide se acredita.",
+            "semeadura": "Um desejo. Não afirma nada sobre o mundo, então não pode "
+            "ser falso — é assim que se planta vontade sem corromper ninguém.",
+            "voz": "Fica registrado que **uma voz disse** isto. Não vira verdade: "
+            "ele decide se acredita.",
             "mundo": "Ele precisa encontrar. Pode não achar, e pode entender errado.",
         }[canal]
     )
-    conteudo = st.text_area(
+    dito = st.text_input(
         "o que dizer",
         placeholder={
-            "semeadura": "buscar uma companheira que me mantenha preenchido de amor",
-            "voz": "há um rio ao norte",
+            "semeadura": "buscar uma companheira que me preencha de amor",
+            "voz": "há um livro que te espera",
             "mundo": "uma pedra marcada",
         }[canal],
     )
-    forca = st.slider("intensidade", 0.1, 1.0, 0.7)
-    if st.button("✦ introduzir", use_container_width=True) and conteudo.strip():
-        quem = next(s for s in seres if s.nome == a_quem)
-        quem.ouvir(Dica(canal, conteudo.strip(), forca), agora)
-        st.success(f"dito a {a_quem} pelo canal {canal}")
+    if st.button("dizer", use_container_width=True) and dito.strip():
+        next(s for s in seres if s.nome == a_quem).ouvir(Dica(canal, dito.strip(), 0.8), agora)
+        st.success(f"dito a {a_quem}")
         st.rerun()
 
-# ───────────────────────────────────────────────────────── os indivíduos
+    st.divider()
+    st.markdown("## 🐍 A serpente")
+    st.caption("Ela não obriga. Só põe a dúvida — e uma pergunta não se refuta, só se carrega.")
+    a_quem_serp = st.selectbox("a quem", [s.nome for s in seres], key="serp")
+    qual = st.selectbox("o que perguntar", range(len(SUSSURROS)),
+                        format_func=lambda i: SUSSURROS[i].pergunta)
+    if st.button("sussurrar", use_container_width=True):
+        st.session_state.serpente.sussurrar(
+            next(s for s in seres if s.nome == a_quem_serp), agora, qual
+        )
+        st.rerun()
 
-for coluna, ser in zip(st.columns(len(seres)), seres):
+    st.divider()
+    detalhes = st.toggle("mostrar os detalhes", value=False)
+    st.caption("crenças, procedência, calibração e o fio inteiro do pensamento")
+
+
+# ────────────────────────────────────────────────────────── os indivíduos
+
+def sentir_em_palavras(ser) -> str:
+    """O estado dele em português, não em números.
+
+    Lê o mesmo vetor de drives que pesou na decisão — por A3 não pode divergir.
+    Só troca o jargão por palavra de gente.
+    """
+    afeto = ser.vontade.afeto
+    dominante = ser.vontade.mais_urgente()
+    falta = {
+        "epistemico": "quer conhecer",
+        "coerencia": "quer entender",
+        "expressao": "quer deixar sua marca",
+        "integridade": "quer se recompor",
+        "vinculo": "quer companhia",
+    }[dominante.nome]
+    humor = (
+        "em paz" if afeto > 0.25
+        else "bem" if afeto > 0
+        else "inquieto" if afeto > -0.25
+        else "em falta"
+    )
+    return humor if dominante.urgencia < 0.15 else f"{humor}, e {falta}"
+
+
+for coluna, ser in zip(st.columns(2), seres):
+    decisao = getattr(ser, "_ultima_decisao", None)
     with coluna:
-        st.subheader(f"{'♂' if ser.corpo.sexo is Sexo.HOMEM else '♀'} {ser.nome}")
-        st.caption(ser.temperamento.descrever())
+        with st.container(border=True):
+            st.markdown(f"## {'♂' if ser.corpo.sexo is Sexo.HOMEM else '♀'} {ser.nome}")
+            st.markdown(f"**está em** {ser.corpo.posicao[1]}, {ser.corpo.posicao[0]}")
+            st.markdown(f"**sente-se** {sentir_em_palavras(ser)}")
 
-        onde = ser.corpo.posicao
-        st.markdown(f"**onde está:** {onde[1]}, {onde[0]}")
-        st.markdown(f"**como se sente:** {ser.vontade.sentimento()}")
+            if decisao:
+                acao = decisao.escolhida.acao
+                st.markdown(f"**está a** {acao.verbo.value} — _{acao.porque}_")
+                if decisao.escolhida.razoes:
+                    st.markdown(f"↳ _{decisao.escolhida.razoes[0].dito}_")
+            else:
+                st.caption("ainda não viveu nada")
 
-        # o que o move agora
-        st.markdown("**o que me falta**")
-        for nome, drive in ser.vontade.drives.items():
-            st.progress(min(1.0, drive.erro), text=f"{nome} — {drive.erro:.0%}")
+            fe = ser.inteligencia.fe
+            if fe:
+                st.success(f"✝ confia em {fe.em_quem}, desde o {fe.desde.mes + 1}º mês")
 
-        # o pensamento
-        st.markdown("**o pensamento**")
-        if ser.narrativa.linhas:
-            ultima = ser.narrativa.linhas[-1]
-            with st.container(border=True):
-                st.caption(f"{ultima.quando} · {ultima.sentimento}")
-                st.text(ultima.pensamento)
-        else:
-            st.caption("ainda não viveu um tick")
+            abertas = ser.inteligencia.em_aberto
+            if abertas:
+                st.markdown("**carrega estas perguntas:**")
+                for duvida in abertas[:3]:
+                    st.markdown(f"· _{duvida.pergunta}_")
 
-        # as razões — o que o faz agir por querer
-        ultima_decisao = getattr(ser, "_ultima_decisao", None)
-        if ultima_decisao and ultima_decisao.escolhida.razoes:
-            st.markdown("**por que quis**")
-            for razao in ultima_decisao.escolhida.razoes:
-                st.markdown(f"· _{razao.dito}_")
-
-        with st.expander("o fio inteiro do último pensamento"):
-            ultima_decisao = getattr(ser, "_ultima_decisao", None)
-            fio = ultima_decisao.pensamento if ultima_decisao else []
-            for linha in fio:
-                st.markdown(f"· {linha}")
-            if not fio:
-                st.caption("—")
-
-        # a fé
-        fe = ser.inteligencia.fe
-        if fe:
-            st.success(
-                f"**confia em {fe.em_quem}** desde {fe.desde} · firmeza {fe.firmeza:.0%}\n\n"
-                f"_{fe.porque_li}_"
-            )
-        else:
-            st.info("ainda não depositou fé em ninguém — e isso é escolha dele(a)")
-
-        # dúvidas
-        abertas = ser.inteligencia.em_aberto
-        with st.expander(f"perguntas em aberto ({len(abertas)})"):
-            for duvida in abertas:
-                st.markdown(f"· *{duvida.pergunta}* — de {duvida.de_quem}, em {duvida.quando}")
-            respondidas = [d for d in ser.inteligencia.duvidas if not d.aberta]
-            if respondidas:
-                st.caption("respondidas:")
-                for duvida in respondidas:
-                    st.caption(f"· {duvida.pergunta} → {duvida.respondida_por}")
-
-        # o que ele descobriu que o preenche
-        with st.expander("o que descobri que me preenche"):
-            st.caption("Ninguém lhe contou. Ele mediu, vivendo.")
-            for oque, drive, media in ser.experiencia.o_que_me_move(8):
-                st.markdown(f"· **{oque}** → {drive} `{media:.3f}`")
-
-        with st.expander(f"o que eu creio ({len(ser.inteligencia.crencas)})"):
-            for crenca in sorted(
-                ser.inteligencia.crencas.values(), key=lambda c: c.confianca, reverse=True
-            )[:12]:
-                st.text(crenca.procedencia())
-
-        with st.expander("os livros que li"):
-            st.caption(f"{len(ser.lidas)} passagens")
-            for carta in sorted(ser.lidas):
-                st.markdown(f"· {carta}")
-
-        with st.expander("o que prometi"):
-            for compromisso in ser.compromissos:
-                st.markdown(f"· {compromisso}")
-                if compromisso.devendo:
-                    st.caption("está devendo — e isso é incoerência, não culpa")
-            if not ser.compromissos:
-                st.caption("não prometeu nada")
-
-        with st.expander("quem é quem para mim"):
             relacoes = ser.relacao_com
             if relacoes:
-                for nome, tipo in relacoes.items():
-                    st.markdown(f"· **{nome}** — {tipo}")
-            else:
-                st.caption("ainda não encontrou ninguém")
+                st.markdown(
+                    "**para ele(a):** " + " · ".join(f"{n} é {t}" for n, t in relacoes.items())
+                )
 
-        with st.expander("o diário"):
-            st.caption(
-                f"viveu {ser.narrativa.vividos:,} ticks; guardo os últimos "
-                f"{len(ser.narrativa.linhas):,}. O que atravessa a vida inteira é a "
-                f"história, ali embaixo.".replace(",", ".")
-            )
-            st.text(ser.narrativa.ler(12))
+            descobriu = ser.experiencia.o_que_me_move(3)
+            if descobriu:
+                st.markdown(
+                    "**descobriu que lhe faz bem:** "
+                    + ", ".join(o.split(" em ")[0] for o, _, _ in descobriu)
+                )
 
-        with st.expander("o que eu sei de mim (A6)"):
-            st.text(ser.conhecer_se(agora))
+        if detalhes:
+            with st.expander("o fio do pensamento"):
+                for linha in (decisao.pensamento if decisao else []):
+                    st.markdown(f"· {linha}")
+            with st.expander("o que ele crê, e por quê"):
+                for crenca in sorted(
+                    ser.inteligencia.crencas.values(), key=lambda c: c.confianca, reverse=True
+                )[:10]:
+                    st.text(crenca.procedencia())
+            with st.expander("o que ele sabe de si"):
+                st.text(ser.conhecer_se(agora))
+                for compromisso in ser.compromissos:
+                    st.text(str(compromisso))
+            with st.expander("o que só nós vemos"):
+                brier = ser.inteligencia.calibracao.brier
+                st.metric(
+                    "Brier", f"{brier:.4f}" if brier else "—", "0 é perfeito · 0,25 é o chute"
+                )
+                st.caption(
+                    f"o mundo diz {agora}; a conta dele diz "
+                    f"{ser.corpo.relogio.conta_propria()} — e ele não é avisado"
+                )
 
 # ────────────────────────────────────────────────────────────── a história
 
-st.divider()
-st.subheader("A história")
-st.caption(
-    "O cronista não escreve nada: **reconhece**. Se um marco nunca acontecer, ele "
-    "fica calado — e isso também é uma história, e verdadeira."
-)
-st.text(st.session_state.cronista.contar())
-
-# ─────────────────────────────────────────────── o que só o Senhor vê (T6)
-
-st.divider()
-st.subheader("O que só o Senhor vê")
-st.caption(
-    "Por T6, a calibração é instrumentação nossa e **não volta para dentro deles**. "
-    "Nós sabemos se estão bem calibrados; eles não recebem a nota."
-)
-for coluna, ser in zip(st.columns(len(seres)), seres):
-    with coluna:
-        brier = ser.inteligencia.calibracao.brier
-        if brier is None:
-            st.caption(f"{ser.nome}: ainda não apostou em nada")
-            continue
-        st.metric(f"{ser.nome} · Brier", f"{brier:.4f}", "0 é perfeito · 0,25 é o chute")
-        st.caption(
-            f"relógio do mundo diz {agora} · a conta dele diz "
-            f"{ser.corpo.relogio.conta_propria()} — e ele não é avisado disso"
+st.markdown("## 📖 O que já aconteceu")
+marcos = st.session_state.cronista.marcos
+if not marcos:
+    st.caption("Ainda nada digno de ser contado. Deixe-os viver.")
+else:
+    for marco in sorted(marcos, key=lambda m: m.quando.tick, reverse=True):
+        st.markdown(
+            f"**{marco.titulo}** — {marco.de_quem}, no {marco.quando.mes + 1}º mês  \n"
+            f"{marco.o_que_houve}"
         )
