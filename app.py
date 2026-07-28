@@ -53,8 +53,14 @@ mundo = st.session_state.mundo
 seres = st.session_state.seres
 
 
+#: Teto por rodagem e teto da vida do mundo, por ordem do Senhor.
+MAXIMO_POR_RODAGEM = 10_000
+MAXIMO_DA_VIDA = 600_000
+
+
 def correr(quantos: int) -> None:
-    for _ in range(quantos):
+    quantos = min(quantos, MAXIMO_POR_RODAGEM, MAXIMO_DA_VIDA - st.session_state.tick)
+    for _ in range(max(0, quantos)):
         agora = Instante(st.session_state.tick)
         for ser in seres:
             ser.viver_um_tick(mundo, agora)
@@ -83,10 +89,23 @@ st.divider()
 
 with st.sidebar:
     st.header("O correr do tempo")
-    passo = st.select_slider("quanto correr", [1, 6, 24, 100, 500, 2000], value=24)
-    if st.button(f"▶ correr {passo} ticks", use_container_width=True, type="primary"):
-        correr(passo)
+    passo = st.select_slider(
+        "quanto correr", [1, 6, 24, 100, 500, 2000, 5000, 10000], value=24
+    )
+    restam = MAXIMO_DA_VIDA - st.session_state.tick
+    if restam <= 0:
+        st.error(f"o mundo chegou ao seu limite de {MAXIMO_DA_VIDA:,} ticks.".replace(",", "."))
+    elif st.button(f"▶ correr {min(passo, restam):,} ticks".replace(",", "."),
+                   use_container_width=True, type="primary"):
+        with st.spinner(f"vivendo {min(passo, restam):,} ticks…".replace(",", ".")):
+            correr(passo)
         st.rerun()
+    st.caption(
+        f"até {MAXIMO_POR_RODAGEM:,} por rodagem · "
+        f"{st.session_state.tick:,} de {MAXIMO_DA_VIDA:,} vividos "
+        f"({st.session_state.tick / MAXIMO_DA_VIDA:.1%})".replace(",", ".")
+    )
+    st.progress(min(1.0, st.session_state.tick / MAXIMO_DA_VIDA))
     if st.button("↺ recomeçar o mundo", use_container_width=True):
         st.session_state.mundo, st.session_state.seres, st.session_state.tick = nascer()
         st.rerun()
@@ -246,6 +265,11 @@ for coluna, ser in zip(st.columns(len(seres)), seres):
                 st.caption("ainda não encontrou ninguém")
 
         with st.expander("o diário"):
+            st.caption(
+                f"viveu {ser.narrativa.vividos:,} ticks; guardo os últimos "
+                f"{len(ser.narrativa.linhas):,}. O que atravessa a vida inteira é a "
+                f"história, ali embaixo.".replace(",", ".")
+            )
             st.text(ser.narrativa.ler(12))
 
         with st.expander("o que eu sei de mim (A6)"):

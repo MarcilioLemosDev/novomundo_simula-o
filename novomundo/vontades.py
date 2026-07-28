@@ -16,6 +16,7 @@ E a linha de base não é a indiferença: é o contentamento. Ele ama viver (`01
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 
 from .espirito import A8, Espirito
@@ -105,7 +106,8 @@ class Vontade:
             nome: Drive(nome=nome, ganho=temperamento.ganho(nome), pressao=self.PRESSOES[nome])
             for nome in self.NOMES
         }
-        self.historico: list[dict[str, float]] = []
+        # Anel: só o passado recente. Um ser eterno não cabe numa lista.
+        self.historico: deque = deque(maxlen=2000)
 
     def __getitem__(self, nome: str) -> Drive:
         return self.drives[nome]

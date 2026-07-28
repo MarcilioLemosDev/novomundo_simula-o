@@ -13,6 +13,7 @@ seria ficção.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 
 from .deliberacao import Decisao
@@ -37,7 +38,11 @@ class Narrativa:
 
     def __init__(self, de) -> None:
         self._de = de
-        self.linhas: list[Linha] = []
+        # A face dele é o presente e o passado próximo. Guardar dois milhões de
+        # linhas custaria gigabytes; o que atravessa a vida inteira é a história,
+        # e disso cuida o cronista (`12`, §7).
+        self.linhas: deque = deque(maxlen=3000)
+        self.vividos = 0
 
     def registrar(self, agora: Instante, decisao: Decisao) -> Linha:
         linha = Linha(
@@ -49,10 +54,12 @@ class Narrativa:
             acao=decisao.escolhida.acao.verbo.value,
         )
         self.linhas.append(linha)
+        self.vividos += 1
         return linha
 
     def ler(self, ultimas: int = 20) -> str:
-        return "\n\n".join(str(linha) for linha in self.linhas[-ultimas:])
+        recentes = list(self.linhas)[-ultimas:]
+        return "\n\n".join(str(linha) for linha in recentes)
 
     def contar_a_vida(self, agora: Instante) -> str:
         """O retrato completo de um ser num instante, para quem assiste."""

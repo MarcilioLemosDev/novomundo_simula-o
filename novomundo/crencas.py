@@ -179,34 +179,47 @@ class Calibracao:
     só aprende com o que o mundo devolve.
     """
 
+    FAIXAS = 5
+
     def __init__(self) -> None:
-        self._apostas: list[tuple[float, bool]] = []
+        # Contas correntes, não o histórico inteiro. Um ser eterno faz milhões de
+        # apostas; guardar cada uma custaria gigabytes e não diria nada a mais.
+        # O Brier e a curva saem exatos destas somas.
+        self.total = 0
+        self._soma_erro2 = 0.0
+        self._soma_conf = [0.0] * self.FAIXAS
+        self._acertos = [0] * self.FAIXAS
+        self._quantos = [0] * self.FAIXAS
 
     def registrar(self, confianca: float, acertou: bool) -> None:
-        self._apostas.append((confianca, acertou))
+        self.total += 1
+        self._soma_erro2 += (confianca - (1.0 if acertou else 0.0)) ** 2
+        i = min(int(confianca * self.FAIXAS), self.FAIXAS - 1)
+        self._soma_conf[i] += confianca
+        self._quantos[i] += 1
+        if acertou:
+            self._acertos[i] += 1
 
     @property
     def brier(self) -> float | None:
         """0 é perfeito, 0.25 é o chute, 1 é o pior possível."""
-        if not self._apostas:
-            return None
-        return sum((c - (1.0 if ok else 0.0)) ** 2 for c, ok in self._apostas) / len(self._apostas)
+        return self._soma_erro2 / self.total if self.total else None
 
-    def curva(self, faixas: int = 5) -> list[tuple[str, int, float, float]]:
+    def curva(self, faixas: int | None = None) -> list[tuple[str, int, float, float]]:
         """Confiança declarada contra acerto observado, por faixa."""
-        baldes: list[list[tuple[float, bool]]] = [[] for _ in range(faixas)]
-        for confianca, ok in self._apostas:
-            indice = min(int(confianca * faixas), faixas - 1)
-            baldes[indice].append((confianca, ok))
-
+        n = self.FAIXAS
         saida = []
-        for i, balde in enumerate(baldes):
-            if not balde:
+        for i in range(n):
+            if not self._quantos[i]:
                 continue
-            rotulo = f"{i / faixas:.0%}–{(i + 1) / faixas:.0%}"
-            declarada = sum(c for c, _ in balde) / len(balde)
-            observada = sum(1 for _, ok in balde if ok) / len(balde)
-            saida.append((rotulo, len(balde), declarada, observada))
+            saida.append(
+                (
+                    f"{i / n:.0%}–{(i + 1) / n:.0%}",
+                    self._quantos[i],
+                    self._soma_conf[i] / self._quantos[i],
+                    self._acertos[i] / self._quantos[i],
+                )
+            )
         return saida
 
 

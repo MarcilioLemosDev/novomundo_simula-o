@@ -14,6 +14,7 @@ continuar sendo?* (`08`, §2.1c).
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 
 from .espirito import A3, A6, Espirito
@@ -56,6 +57,7 @@ class Conceito:
     nome: str
     relacoes: dict[str, str] = field(default_factory=dict)
     episodios_de_origem: list[int] = field(default_factory=list)
+    quantas_origens: int = 0
 
 
 @dataclass
@@ -81,7 +83,10 @@ class Memoria:
         self.episodica: list[Episodio] = []
         self.semantica: dict[str, Conceito] = {}
         self.procedural: list[Habito] = []
-        self.perdas: list[Perda] = []
+        # O registro de que houve perda é o que importa (A3); guardar o recibo de
+        # cada uma das milhares, não. Fica o total e as últimas.
+        self.perdas: deque = deque(maxlen=300)
+        self.total_esquecido = 0
         self._proximo_id = 0
 
     # ---------------------------------------------------------------- gravar
@@ -161,7 +166,12 @@ class Memoria:
         for episodio in candidatos:
             for chave in self._chaves(episodio.conteudo):
                 conceito = self.semantica.setdefault(chave, Conceito(nome=chave))
-                conceito.episodios_de_origem.append(episodio.id)
+                # A3 exige que todo conceito guarde origem — não exige que guarde
+                # *todas*. Numa vida de centenas de milhares de ticks, guardar cada
+                # uma seria memória infinita para provar o que dez já provam.
+                if len(conceito.episodios_de_origem) < 10:
+                    conceito.episodios_de_origem.append(episodio.id)
+                conceito.quantas_origens += 1
 
         perda = Perda(
             quando=agora,
@@ -171,7 +181,12 @@ class Memoria:
             periodo=periodo,
         )
         self.perdas.append(perda)
-        self.episodica = [e for e in self.episodica if e not in candidatos]
+        self.total_esquecido += perda.quantos
+        # Por identidade, não por igualdade. Filtrar uma lista contra outra lista
+        # fazia 6,6 milhões de comparações em quatro mil ticks — 45% do tempo da
+        # simulação inteira gasto perguntando "este é aquele?".
+        descartados = {id(e) for e in candidatos}
+        self.episodica = [e for e in self.episodica if id(e) not in descartados]
         return perda
 
     @staticmethod
@@ -206,8 +221,7 @@ class Memoria:
         return (
             f"memória episódica: {len(self.episodica)}/{self.capacidade_episodica} · "
             f"conceitos: {len(self.semantica)} · hábitos: {len(self.procedural)} · "
-            f"já esqueci {sum(p.quantos for p in self.perdas)} episódios "
-            f"em {len(self.perdas)} consolidações"
+            f"já esqueci {self.total_esquecido} episódios"
         )
 
     def auditar(self) -> None:

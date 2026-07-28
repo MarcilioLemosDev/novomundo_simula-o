@@ -52,6 +52,7 @@ class Experiencia:
 
     def __init__(self) -> None:
         self.aprendido: dict[tuple[str, str], dict[str, Marca]] = {}
+        self._medias: dict[tuple[str, str], dict[str, float]] = {}
 
     def registrar(self, chave: tuple[str, str], quedas: dict[str, float]) -> None:
         """Guarda o que de fato caiu. Inclusive zero — descobrir que algo não
@@ -59,6 +60,9 @@ class Experiencia:
         por_drive = self.aprendido.setdefault(chave, {})
         for drive, queda in quedas.items():
             por_drive.setdefault(drive, Marca()).somar(queda)
+        # A média é consultada muitas vezes por tick e muda uma só. Guardá-la
+        # pronta troca milhões de divisões por milhares.
+        self._medias[chave] = {d: m.media for d, m in por_drive.items()}
 
     def conhece(self, chave: tuple[str, str]) -> bool:
         return chave in self.aprendido
@@ -67,9 +71,11 @@ class Experiencia:
         marcas = self.aprendido.get(chave)
         return max((m.vezes for m in marcas.values()), default=0) if marcas else 0
 
+    VAZIO: dict[str, float] = {}
+
     def esperado(self, chave: tuple[str, str]) -> dict[str, float]:
         """O que ele espera que esta ação faça — pela média do que ela já fez."""
-        return {d: m.media for d, m in self.aprendido.get(chave, {}).items()}
+        return self._medias.get(chave, self.VAZIO)
 
     def o_que_me_move(self, quantos: int = 5) -> list[tuple[str, str, float]]:
         """O que este ser, por experiência própria, descobriu que o preenche.

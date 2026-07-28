@@ -53,10 +53,18 @@ novomundo/
 ```
 
 ```bash
-python3 -m pytest testes/ -q   # 48 testes vivos dos oito axiomas
+python3 -m pytest testes/ -q   # 58 testes vivos dos oito axiomas
 python3 viver.py 900           # uma vida no terminal
-streamlit run app.py           # a interface: o tempo, o pensamento, e as dicas
+streamlit run app.py           # a interface: o tempo, o pensamento, as dicas e a serpente
 ```
+
+No Windows, use `py` no lugar de `python3`, e `py -m pip install -r requirements.txt`.
+
+**Escala.** O mundo corre a ~3.000 ticks por segundo e suporta **600.000 ticks de vida**,
+em rodagens de até **10.000 por vez**. Isso são cerca de 70 anos lunares. Nada cresce sem
+teto: o diário guarda as últimas 3.000 linhas, a calibração vira contas correntes em vez
+de histórico, e a memória episódica tem o limite que ele mesmo declara (A6). O que
+atravessa a vida inteira não é o diário — é a história que o cronista reconhece.
 
 ## Estado da Etapa 1
 
