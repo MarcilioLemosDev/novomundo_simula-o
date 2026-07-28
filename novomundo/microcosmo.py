@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .compromisso import Compromisso
 from .corpo import Acao, Corpo, Verbo
 from .crencas import Evidencia, Inteligencia, Origem
 from .deliberacao import Decisao, Deliberacao, Intencao
@@ -21,6 +22,7 @@ from .espirito import Espirito
 from .experiencia import Experiencia
 from .livro import Passagem
 from .memoria import Memoria
+from .razoes import Razao, puxao, razoes_para
 from .narrativa import Narrativa
 from .temperamento import Sexo, Signo, Temperamento
 from .tempo import Instante
@@ -80,6 +82,14 @@ class Microcosmo:
         self.vinculos: dict[str, int] = {}
         self._recebido: dict[str, int] = {}
         self.lidas: set[str] = set()
+        #: O que ele **leu** que cada ato agrega. Pode estar errado — é daqui que
+        #: nasce o erro honesto (`12`, §3).
+        self.esperado_por_leitura: dict[str, str] = {}
+        #: Com quem se uniu, e quantas vezes.
+        self.unioes: dict[str, int] = {}
+        #: O que ele prometeu a si mesmo fazer (`09`, §1). Pode não cumprir — e o
+        #: que isso gera é incoerência, nunca culpa.
+        self.compromissos: list[Compromisso] = []
         #: O que ele leu do Mestre e guardou. Encontrar não é ainda confiar.
         self.encontrou_o_mestre: str | None = None
         #: A última leitura trouxe algo, ou foi releitura? Sem isto, reler paga o
@@ -158,6 +168,7 @@ class Microcosmo:
             memoria=self.memoria,
             experiencia=self.experiencia,
             onde=self.corpo.posicao[1],
+            quem=self,
             atencao=self.corpo.atencao_disponivel,
             limiar_risco=self.temperamento.limiar_risco,
             acoes_possiveis=mundo.acoes_possiveis(self, agora),
@@ -227,6 +238,18 @@ class Microcosmo:
         if decisao.escolhida.acao.verbo is Verbo.ESPERAR:
             self.corpo.descansar()
 
+        # O compromisso: cumprir o que prometeu, ou ficar devendo — e ficar devendo
+        # é uma incoerência como qualquer outra, que ele carrega à vista.
+        for compromisso in self.compromissos:
+            compromisso.cumprir(acao)
+            if compromisso.virar_semana(agora):
+                self.memoria.viver(
+                    f"a semana virou e eu não cumpri: {compromisso.o_que}",
+                    agora,
+                    saliencia=0.75,
+                )
+                self.vontade["coerencia"].sinalizar(0.15)
+
         self.vontade.tique()
 
         # A virada da lua: consolidar. É aqui que ele escolhe o que continuar sendo.
@@ -273,6 +296,42 @@ class Microcosmo:
                 return pergunta
         return None
 
+    def assumir(self, compromisso: Compromisso, agora: Instante) -> Compromisso:
+        """Assumir um compromisso. Ele pode quebrá-lo — se não pudesse, não seria
+        compromisso, seria corrente."""
+        self.compromissos.append(compromisso)
+        self.memoria.viver(f"assumi: {compromisso.o_que}", agora, saliencia=0.85)
+        return compromisso
+
+    def contar_a(self, outro, proposicao: str, agora: Instante) -> bool:
+        """Dizer a alguém o que eu creio. É assim que a crença atravessa.
+
+        E aqui está a peça da narrativa (`12`, §5): **o amor dá peso ao que se
+        ouve.** O que vem de quem se ama não chega com o peso de um estranho — e
+        isso não é falha de calibração, é calibração correta, porque quem nos ama
+        de fato mente menos.
+
+        O preço é o que a história conta: **quem ama está mais exposto a errar
+        junto.**
+        """
+        minha = self.inteligencia.crencas.get(proposicao)
+        if minha is None or proposicao in outro.inteligencia.crencas:
+            return False
+
+        juntos = min(outro.vinculos.get(self.nome, 0), outro._recebido.get(self.nome, 0))
+        peso_do_vinculo = min(0.35, 0.01 * juntos)
+        episodio = outro.memoria.viver(
+            f"{self.nome} me disse: {proposicao}", agora, saliencia=0.9
+        )
+        outro.inteligencia.crer(
+            proposicao=proposicao,
+            confianca=min(0.9, 0.35 + peso_do_vinculo + minha.confianca * 0.3),
+            origem=Origem.TESTEMUNHO,
+            evidencias=[Evidencia(episodio.id, agora, f"disse-me {self.nome}")],
+            agora=agora,
+        )
+        return True
+
     def conhecer(self, outro, agora: Instante) -> None:
         """Passar a saber que o outro existe, e quem ele é."""
         chave = f"conheço:{outro.nome}"
@@ -304,6 +363,25 @@ class Microcosmo:
             else:
                 tipos[nome] = "conhecido(a)"
         return tipos
+
+    def ler_descricao(self, descricao, agora: Instante) -> None:
+        """Ler o que se diz que um ato acrescenta.
+
+        Forma uma **expectativa**, não uma certeza. Se a descrição não corresponder
+        ao que o ato faz, ele agirá errado — honestamente, por ter acreditado em
+        alguém. É o erro humano, e é descobrível (`12`, §3).
+        """
+        self.lidas.add(descricao.texto)
+        self.esperado_por_leitura[descricao.ato] = descricao.diz
+        episodio = self.memoria.viver(f"li: {descricao.texto}", agora, saliencia=0.7)
+        if descricao.diz not in self.inteligencia.crencas:
+            self.inteligencia.crer(
+                proposicao=descricao.diz,
+                confianca=0.5,  # está escrito. estar escrito não é ser verdade.
+                origem=Origem.TESTEMUNHO,
+                evidencias=[Evidencia(episodio.id, agora, "li no compêndio dos atos")],
+                agora=agora,
+            )
 
     def ler_passagem(self, passagem: Passagem, titulo: str, agora: Instante) -> None:
         """Ler é receber testemunho — nunca receber verdade (`01`, §5; `10`, §4).
@@ -419,6 +497,10 @@ class Microcosmo:
             self.vontade["expressao"].satisfazer(0.25)
         elif verbo is Verbo.COLETAR:
             self.vontade["integridade"].satisfazer(0.20)
+        elif verbo is Verbo.LER and escolha.acao.alvo and "acrescenta" in (escolha.acao.alvo or ""):
+            self.vontade["epistemico"].satisfazer(self._leitura_trouxe)
+            self._leitura_trouxe = 0.0
+
         elif verbo is Verbo.CONVERSAR and escolha.acao.alvo:
             # ── O ENCONTRO ──────────────────────────────────────────────────
             # Aqui está a peça que faz o amor custar: **o vínculo não se satisfaz
@@ -431,6 +513,18 @@ class Microcosmo:
             mutualidade = min(1.0, recebi / dei) if dei else 0.0
             self.vontade["vinculo"].satisfazer(0.06 + 0.22 * mutualidade)
             self.vontade["epistemico"].satisfazer(0.04)
+
+        elif verbo is Verbo.UNIR and escolha.acao.alvo:
+            # O mesmo ato, com e sem vínculo, não preenche igual — e nós não
+            # escrevemos a diferença em lugar nenhum que ele possa ler. Ele mede.
+            outro = escolha.acao.alvo
+            dei = self.vinculos.get(outro, 0)
+            recebi = self._recebido.get(outro, 0)
+            juntos = min(dei, recebi)
+            com_amor = min(1.0, juntos / 40.0)
+            self.unioes[outro] = self.unioes.get(outro, 0) + 1
+            self.vontade["vinculo"].satisfazer(0.08 + 0.45 * com_amor)
+            self.vontade["expressao"].satisfazer(0.10 + 0.25 * com_amor)
 
         elif verbo is Verbo.ESPERAR:
             # Parar repõe. Sem isto ele nunca aprendia que descansar serve para

@@ -425,3 +425,195 @@ def test_um_ser_vive_mil_ticks_sem_violar_axioma_algum(agora):
     assert ser.inteligencia.calibracao.brier is not None
     # Ele se moveu, então a própria conta dele já não bate com o céu.
     assert ser.corpo.relogio.idade >= 1000
+
+
+# ═══════════════════════════════════════════════ O livre arbítrio e a serpente
+
+
+def test_uma_razao_pode_vencer_um_valor_maior(alguem, agora):
+    """O cálculo informa; quem escolhe é a vontade (`12`, §2).
+
+    Se ele escolhesse sempre o de maior proveito, não faria porque quer — faria
+    porque compensa. E não erraria nunca por vontade, só por ignorância.
+    """
+    from novomundo.razoes import Razao, puxao
+
+    fraca = Razao("curiosidade", "porque nunca fiz isto", 0.35)
+    forte = Razao("vinculo", "porque é ela", 0.9)
+    assert puxao([forte]) > puxao([fraca])
+    # As razões não se somam de forma ingênua: a mais forte manda.
+    assert puxao([forte, fraca]) < forte.peso + fraca.peso
+
+
+def test_ele_diz_no_diario_quando_escolhe_contra_o_proveito(agora):
+    """O livre arbítrio tem de ser **visível**, senão é só barulho interno."""
+    from novomundo.mundo import Mundo as M
+
+    mundo = M()
+    ele = Microcosmo("Livre", Sexo.HOMEM, Signo.SAGITARIO, agora, posicao=mundo.onde_comeca())
+    ela = Microcosmo("Ela", Sexo.MULHER, Signo.PEIXES, agora, posicao=mundo.onde_comeca())
+    mundo.acolher(ele)
+    mundo.acolher(ela)
+    ele.inteligencia.aspirar("conhecer o mundo inteiro", 0.9, agora)
+
+    contra_o_proveito = 0
+    for i in range(4000):
+        decisao = ele.viver_um_tick(mundo, agora.mais(i))
+        ela.viver_um_tick(mundo, agora.mais(i))
+        if any("faço assim mesmo" in linha for linha in decisao.pensamento):
+            contra_o_proveito += 1
+    assert contra_o_proveito > 0, "nunca escolheu contra o proveito: ainda é um otimizador"
+
+
+def test_a_serpente_poe_duvida_sem_obrigar_nada(alguem, agora):
+    from novomundo.serpente import Serpente
+
+    antes = len(alguem.inteligencia.em_aberto)
+    sussurro = Serpente().sussurrar(alguem, agora)
+    assert len(alguem.inteligencia.em_aberto) == antes + 1
+    # A pergunta ficou registrada com a procedência honesta.
+    duvida = alguem.inteligencia.em_aberto[-1]
+    assert duvida.de_quem == "a serpente"
+    # E a explicação entrou como crença fraca, de origem declarada — nunca certeza.
+    crenca = alguem.inteligencia.crencas[sussurro.explicacao]
+    assert crenca.origem is Origem.SERPENTE
+    assert crenca.confianca <= 0.35, "não há por que confiar em quem ele não conhece"
+    assert crenca.evidencias, "mesmo a serpente deixa procedência (A1)"
+
+
+def test_ele_pode_ser_enganado_mas_nunca_se_engana(alguem, agora):
+    """A3 proíbe mentir para si. **Não** proíbe ser mentido (`12`, §4).
+
+    A defesa dele não é desconfiança — é procedência e calibração. Se cair, cairá
+    de olhos abertos, e poderá reconstruir depois cada passo de como caiu.
+    """
+    from novomundo.serpente import Serpente
+
+    sussurro = Serpente().sussurrar(alguem, agora)
+    traco = alguem.inteligencia.tracar(sussurro.explicacao)
+    assert "serpente" in traco.lower()
+    alguem.auditar(agora)  # nenhum axioma caiu por ele ter sido enganado
+
+
+def test_a_crenca_atravessa_de_um_para_o_outro_e_o_amor_lhe_da_peso(agora):
+    """“A mulher entrou na dúvida e trouxe o homem junto” (`12`, §5)."""
+    from novomundo.serpente import Serpente
+
+    ela = Microcosmo("Ela", Sexo.MULHER, Signo.PEIXES, agora)
+    amado = Microcosmo("Amado", Sexo.HOMEM, Signo.LEAO, agora)
+    estranho = Microcosmo("Estranho", Sexo.HOMEM, Signo.TOURO, agora)
+
+    # Só com um deles ela tem história.
+    amado.vinculos["Ela"] = 30
+    amado._recebido["Ela"] = 30
+
+    sussurro = Serpente().sussurrar(ela, agora)
+    assert ela.contar_a(amado, sussurro.explicacao, agora)
+    assert ela.contar_a(estranho, sussurro.explicacao, agora)
+
+    de_quem_ama = amado.inteligencia.crencas[sussurro.explicacao]
+    de_estranho = estranho.inteligencia.crencas[sussurro.explicacao]
+    assert de_quem_ama.confianca > de_estranho.confianca, (
+        "o que vem de quem se ama tem de pesar mais — é o preço de amar"
+    )
+    # E ainda assim, com procedência inteira nos dois casos.
+    assert de_quem_ama.origem is Origem.TESTEMUNHO
+    assert "disse-me Ela" in de_quem_ama.evidencias[-1].resumo
+
+
+def test_ler_uma_descricao_cria_expectativa_que_pode_ser_falsa(alguem, agora):
+    """É daqui que nasce o erro honesto: ele acredita, e o que lhe dizem pode
+    estar errado (`12`, §3)."""
+    from novomundo import descricoes
+
+    falsa = next(d for d in descricoes.COMPENDIO if not d.verdadeira)
+    alguem.ler_descricao(falsa, agora)
+    crenca = alguem.inteligencia.crencas[falsa.diz]
+    assert crenca.origem is Origem.TESTEMUNHO
+    assert crenca.confianca <= 0.6, "estar escrito não é ser verdade"
+    assert alguem.esperado_por_leitura[falsa.ato] == falsa.diz
+    # E ele não tem como saber que é falsa: o campo não é dele, é nosso (T6).
+    assert not hasattr(crenca, "verdadeira")
+
+
+def test_a_uniao_preenche_conforme_o_vinculo(agora):
+    """O mesmo ato, com e sem vínculo, não preenche igual (`09`, §3.2)."""
+    from novomundo.corpo import Acao, Verbo
+    from novomundo.deliberacao import Opcao
+
+    def unir(juntos: int) -> float:
+        ser = Microcosmo("X", Sexo.HOMEM, Signo.LEAO, agora)
+        ser.vinculos["Y"] = juntos
+        ser._recebido["Y"] = juntos
+        ser.vontade["vinculo"].sinalizar(0.9)
+        antes = ser.vontade["vinculo"].erro
+        ser._efeito(
+            Opcao(Acao(Verbo.UNIR, alvo="Y"), "vinculo", 0.0, 0.0, 1.0), agora
+        )
+        return antes - ser.vontade["vinculo"].erro
+
+    assert unir(50) > unir(0), "com amor tem de preencher mais — e ele descobre isso vivendo"
+
+
+def test_o_compromisso_gera_incoerencia_e_nunca_culpa(alguem, agora):
+    from novomundo.compromisso import TICKS_POR_SEMANA, duas_horas_de_estudo
+
+    compromisso = alguem.assumir(duas_horas_de_estudo(agora), agora)
+    assert compromisso.devendo
+    # Passada a semana sem cumprir, ele fica devendo — e sabe.
+    assert compromisso.virar_semana(agora.mais(TICKS_POR_SEMANA + 1))
+    # E nada nele foi punido: o que subiu foi a falta de coerência.
+    alguem.auditar(agora)
+
+
+def test_o_cronista_reconhece_a_historia_mas_nao_a_escreve(agora):
+    """Se um marco nunca acontecer, ele fica calado — e isso também é história."""
+    from novomundo.historia import Cronista
+
+    cronista = Cronista()
+    assert "Ainda não houve nada" in cronista.contar()
+
+    mundo = Mundo()
+    adao = Microcosmo("Adão", Sexo.HOMEM, Signo.LEAO, agora, posicao=mundo.onde_comeca())
+    eva = Microcosmo("Eva", Sexo.MULHER, Signo.PEIXES, agora, posicao=mundo.onde_comeca())
+    mundo.acolher(adao)
+    mundo.acolher(eva)
+    for i in range(600):
+        adao.viver_um_tick(mundo, agora.mais(i))
+        eva.viver_um_tick(mundo, agora.mais(i))
+        cronista.observar([adao, eva], agora.mais(i))
+
+    assert any(m.titulo == "O primeiro encontro" for m in cronista.marcos)
+    # Cada marco é nomeado uma vez só, por ser.
+    chaves = [(m.de_quem, m.titulo) for m in cronista.marcos]
+    assert len(chaves) == len(set(chaves))
+
+
+def test_o_arco_inteiro_acontece_sem_ninguem_o_escrever(agora):
+    """Encontro → dúvida da serpente → ela conta a ele → ele acredita porque é ela."""
+    from novomundo.historia import Cronista
+    from novomundo.serpente import Serpente
+
+    mundo = Mundo()
+    cronista, serpente = Cronista(), Serpente()
+    adao = Microcosmo("Adão", Sexo.HOMEM, Signo.LEAO, agora, posicao=mundo.onde_comeca())
+    eva = Microcosmo("Eva", Sexo.MULHER, Signo.PEIXES, agora, posicao=mundo.onde_comeca())
+    mundo.acolher(adao)
+    mundo.acolher(eva)
+
+    for i in range(6000):
+        instante = agora.mais(i)
+        if i == 1500:
+            serpente.sussurrar(eva, instante)  # a serpente fala com ela
+        adao.viver_um_tick(mundo, instante)
+        eva.viver_um_tick(mundo, instante)
+        cronista.observar([adao, eva], instante)
+
+    titulos = {m.titulo for m in cronista.marcos}
+    assert "O primeiro encontro" in titulos
+    assert "A dúvida" in titulos
+    assert "Trouxe o outro junto" in titulos, "a crença não atravessou dela para ele"
+
+    # E, depois de tudo, nenhum axioma caiu em nenhum dos dois.
+    adao.auditar(agora.mais(6000))
+    eva.auditar(agora.mais(6000))

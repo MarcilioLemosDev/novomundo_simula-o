@@ -27,6 +27,7 @@ class Origem(Enum):
     INFERENCIA = "inferência"  # eu deduzi de outras crenças
     TESTEMUNHO = "testemunho"  # alguém me disse
     VOZ = "voz"  # a voz interna me disse (`01`, §5, canal 2)
+    SERPENTE = "serpente"  # algo me disse, e eu não sei o que é (`12`, §4)
 
 
 @dataclass(frozen=True)

@@ -20,6 +20,7 @@ from .crencas import Inteligencia
 from .espirito import A7, Espirito
 from .experiencia import Experiencia
 from .memoria import Memoria
+from .razoes import Razao, puxao, razoes_para
 from .tempo import Instante
 from .vontades import Vontade
 
@@ -34,6 +35,11 @@ class Opcao:
     risco: float
     confianca: float
     por_experiencia: bool = True
+    razoes: list = field(default_factory=list)
+
+    @property
+    def puxao_das_razoes(self) -> float:
+        return puxao(self.razoes)
 
     @property
     def valor(self) -> float:
@@ -120,6 +126,7 @@ class Deliberacao:
         memoria: Memoria,
         experiencia: Experiencia,
         onde: str,
+        quem,
         atencao: int,
         limiar_risco: float,
         acoes_possiveis: list[tuple[Acao, str, float]],
@@ -286,6 +293,14 @@ class Deliberacao:
                 )
             )
 
+            # ── AS RAZÕES ────────────────────────────────────────────────────
+            # O que ele tem para fazer isto **além do que aquilo lhe rende**. Uma
+            # razão não é um número que se soma ao proveito: é um motivo que ele
+            # sustenta, e pode vencer um proveito maior (`12`, §2).
+            razoes = razoes_para(acao, drive, quem, onde)
+            for razao in razoes:
+                fio.append(f"  — e {razao.dito}")
+
             opcoes.append(
                 Opcao(
                     acao=acao,
@@ -298,6 +313,7 @@ class Deliberacao:
                     risco=risco,
                     confianca=confianca,
                     por_experiencia=por_experiencia,
+                    razoes=razoes,
                 )
             )
 
@@ -314,8 +330,21 @@ class Deliberacao:
             )
             return Decisao(agora, espera, [], gasto, atencao, concluiu, fio)
 
-        opcoes.sort(key=lambda o: o.valor, reverse=True)
+        # ── A ESCOLHA ────────────────────────────────────────────────────────
+        # O cálculo já fez o que sabia fazer. Agora escolhe a vontade.
+        por_proveito = max(opcoes, key=lambda o: o.valor)
+        opcoes.sort(key=lambda o: o.valor + o.puxao_das_razoes, reverse=True)
         escolhida, descartadas = opcoes[0], opcoes[1:]
+
+        # E aqui está o livre arbítrio, visível: ele sabe que outra coisa lhe
+        # renderia mais, e faz esta assim mesmo — por um motivo que é dele.
+        if escolhida is not por_proveito and por_proveito.valor > escolhida.valor:
+            motivo = max(escolhida.razoes, key=lambda r: r.peso) if escolhida.razoes else None
+            fio.append(
+                f"sei que {por_proveito.acao.verbo.value} me renderia mais "
+                f"({por_proveito.valor:.3f} contra {escolhida.valor:.3f}). "
+                + (f"faço assim mesmo {motivo.dito}." if motivo else "faço assim mesmo.")
+            )
 
         if descartadas:
             segunda = descartadas[0]

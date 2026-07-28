@@ -17,6 +17,7 @@ import math
 from dataclasses import dataclass, field
 
 from .corpo import Acao, Verbo
+from . import descricoes
 from .livro import Livro, acervo
 from .tempo import TICKS_POR_DIA, Instante
 
@@ -278,6 +279,17 @@ class Mundo:
         if aqui.tipo == "biblioteca" and self.livros_em(aqui.nome):
             # O livro atravessa o mundo sem que ninguém pague o 3× (`01`, §1.1).
             # Ler é a única forma de saber de longe sem ir até lá.
+            # O compêndio do que cada ato acrescenta. Algumas entradas conferem;
+            # outras não — e nós não dizemos quais (`12`, §3).
+            if descricoes.proxima(quem.lidas) is not None:
+                oferta.append(
+                    (
+                        Acao(Verbo.LER, alvo=descricoes.TITULO,
+                             porque="ler o que dizem que cada ato acrescenta"),
+                        "epistemico",
+                        0.0,
+                    )
+                )
             for livro in self.livros_em(aqui.nome):
                 proxima = livro.por_ler(quem.lidas)
                 oferta.append(
@@ -376,6 +388,17 @@ class Mundo:
                     0.0,
                 )
             )
+            # A união. Só entre dois que já se procuraram — e o quanto preenche
+            # depende do quanto os dois se voltaram um para o outro (`12`, §6).
+            juntos = min(quem.vinculos.get(outro.nome, 0), quem._recebido.get(outro.nome, 0))
+            if juntos >= 8 and outro.corpo.sexo is not quem.corpo.sexo:
+                oferta.append(
+                    (
+                        Acao(Verbo.UNIR, alvo=outro.nome, porque=f"unir-me a {outro.nome}"),
+                        "vinculo",
+                        0.0,
+                    )
+                )
 
         oferta.append((Acao(Verbo.ESPERAR, porque="parar e pensar"), "coerencia", 0.0))
         oferta.append((Acao(Verbo.ESPERAR, porque="recobrar o fôlego"), "integridade", 0.0))
@@ -402,6 +425,14 @@ class Mundo:
                 outro._recebido[quem.nome] = outro._recebido.get(quem.nome, 0) + 1
                 quem.conhecer(outro, agora)
                 # E ela levanta uma dúvida — que nenhum dos dois sabe responder.
+                # Contar ao outro algo que eu creio e ele não. É por aqui que a
+                # dúvida da serpente atravessa de um para o outro (`12`, §5).
+                for proposicao, crenca in list(quem.inteligencia.crencas.items())[::-1]:
+                    if crenca.origem.name in ("SERPENTE", "TESTEMUNHO") and quem.contar_a(
+                        outro, proposicao, agora
+                    ):
+                        break
+
                 pergunta = outro.perguntar(agora)
                 if pergunta:
                     quem.inteligencia.duvidar(pergunta, outro.nome, agora)
@@ -414,6 +445,31 @@ class Mundo:
         if acao.verbo is Verbo.MARCAR:
             capital.marcas[aqui.nome] = acao.alvo or "◈"
             return f"deixei minha marca em {aqui.nome}"
+
+        if acao.verbo is Verbo.UNIR and acao.alvo:
+            outro = next((h for h in self.habitantes if h.nome == acao.alvo), None)
+            if outro is not None:
+                outro.unioes[quem.nome] = outro.unioes.get(quem.nome, 0) + 1
+                outro._recebido[quem.nome] = outro._recebido.get(quem.nome, 0) + 1
+                # E pode conceber (T8.1). Nove meses lunares no relógio do mundo.
+                mulher = quem if quem.corpo.sexo.value == "mulher" else outro
+                homem = outro if mulher is quem else quem
+                if mulher.corpo.gestacao is None and (agora.tick % 7 == 0):
+                    mulher.corpo.conceber(homem.nome, agora)
+                    mulher.memoria.viver(
+                        f"concebi de {homem.nome}", agora, saliencia=1.0
+                    )
+                    return f"uni-me a {acao.alvo}, e concebi"
+            return f"uni-me a {acao.alvo}"
+
+        if acao.verbo is Verbo.LER and acao.alvo == descricoes.TITULO:
+            proxima = descricoes.proxima(quem.lidas)
+            if proxima is None:
+                quem._leitura_trouxe = 0.0
+                return "reli o compêndio; já sei o que dizem"
+            quem.ler_descricao(proxima, agora)
+            quem._leitura_trouxe = 0.10
+            return f"li o que dizem de {proxima.ato}"
 
         if acao.verbo is Verbo.LER and acao.alvo:
             livro = next((l for l in self.acervo if l.titulo == acao.alvo), None)

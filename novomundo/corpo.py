@@ -33,6 +33,7 @@ class Verbo(Enum):
     CONTEMPLAR = "contemplar"
     DIVERTIR = "divertir-se"
     CONVERSAR = "conversar"
+    UNIR = "unir-se"
 
     @property
     def custa_dilatado(self) -> bool:

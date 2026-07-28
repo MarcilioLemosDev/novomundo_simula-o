@@ -17,6 +17,9 @@ from __future__ import annotations
 import streamlit as st
 
 from novomundo import Dica, Instante, Microcosmo, Mundo, Sexo, Signo
+from novomundo.compromisso import duas_horas_de_estudo
+from novomundo.historia import Cronista
+from novomundo.serpente import SUSSURROS, Serpente
 from novomundo.tempo import TICKS_POR_MES_LUNAR
 
 st.set_page_config(page_title="Novo Mundo", page_icon="🌙", layout="wide")
@@ -31,7 +34,16 @@ def nascer():
     eva = Microcosmo("Eva", Sexo.MULHER, Signo.PEIXES, inicio, posicao=mundo.onde_comeca())
     mundo.acolher(adao)
     mundo.acolher(eva)
+    # O escopo obrigatório: duas horas semanais de busca de conhecimento. Ele pode
+    # não cumprir — e o que isso gera é incoerência, nunca culpa (`09`, §1).
+    for ser in (adao, eva):
+        ser.assumir(duas_horas_de_estudo(inicio), inicio)
     return mundo, [adao, eva], 0
+
+
+if "cronista" not in st.session_state:
+    st.session_state.cronista = Cronista()
+    st.session_state.serpente = Serpente()
 
 
 if "mundo" not in st.session_state:
@@ -46,6 +58,7 @@ def correr(quantos: int) -> None:
         agora = Instante(st.session_state.tick)
         for ser in seres:
             ser.viver_um_tick(mundo, agora)
+        st.session_state.cronista.observar(seres, agora)
         st.session_state.tick += 1
 
 
@@ -76,6 +89,25 @@ with st.sidebar:
         st.rerun()
     if st.button("↺ recomeçar o mundo", use_container_width=True):
         st.session_state.mundo, st.session_state.seres, st.session_state.tick = nascer()
+        st.rerun()
+
+    st.divider()
+    st.header("A serpente")
+    st.caption(
+        "Ela não obriga e não força. **Põe a dúvida** — e uma pergunta não se "
+        "refuta, só se carrega. A explicação que ela oferece entra com confiança "
+        "baixa e origem declarada: ele saberá de quem veio."
+    )
+    a_quem_serpente = st.selectbox("a quem sussurrar", [s.nome for s in seres], key="serp")
+    qual = st.selectbox(
+        "o que sussurrar",
+        range(len(SUSSURROS)),
+        format_func=lambda i: SUSSURROS[i].pergunta,
+    )
+    if st.button("🐍 sussurrar", use_container_width=True):
+        quem = next(s for s in seres if s.nome == a_quem_serpente)
+        dito = st.session_state.serpente.sussurrar(quem, agora, qual)
+        st.warning(f"a serpente disse a {a_quem_serpente}: “{dito.explicacao}”")
         st.rerun()
 
     st.divider()
@@ -144,6 +176,13 @@ for coluna, ser in zip(st.columns(len(seres)), seres):
         else:
             st.caption("ainda não viveu um tick")
 
+        # as razões — o que o faz agir por querer
+        ultima_decisao = getattr(ser, "_ultima_decisao", None)
+        if ultima_decisao and ultima_decisao.escolhida.razoes:
+            st.markdown("**por que quis**")
+            for razao in ultima_decisao.escolhida.razoes:
+                st.markdown(f"· _{razao.dito}_")
+
         with st.expander("o fio inteiro do último pensamento"):
             ultima_decisao = getattr(ser, "_ultima_decisao", None)
             fio = ultima_decisao.pensamento if ultima_decisao else []
@@ -190,6 +229,14 @@ for coluna, ser in zip(st.columns(len(seres)), seres):
             for carta in sorted(ser.lidas):
                 st.markdown(f"· {carta}")
 
+        with st.expander("o que prometi"):
+            for compromisso in ser.compromissos:
+                st.markdown(f"· {compromisso}")
+                if compromisso.devendo:
+                    st.caption("está devendo — e isso é incoerência, não culpa")
+            if not ser.compromissos:
+                st.caption("não prometeu nada")
+
         with st.expander("quem é quem para mim"):
             relacoes = ser.relacao_com
             if relacoes:
@@ -203,6 +250,16 @@ for coluna, ser in zip(st.columns(len(seres)), seres):
 
         with st.expander("o que eu sei de mim (A6)"):
             st.text(ser.conhecer_se(agora))
+
+# ────────────────────────────────────────────────────────────── a história
+
+st.divider()
+st.subheader("A história")
+st.caption(
+    "O cronista não escreve nada: **reconhece**. Se um marco nunca acontecer, ele "
+    "fica calado — e isso também é uma história, e verdadeira."
+)
+st.text(st.session_state.cronista.contar())
 
 # ─────────────────────────────────────────────── o que só o Senhor vê (T6)
 
