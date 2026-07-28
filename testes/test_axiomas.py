@@ -617,3 +617,80 @@ def test_o_arco_inteiro_acontece_sem_ninguem_o_escrever(agora):
     # E, depois de tudo, nenhum axioma caiu em nenhum dos dois.
     adao.auditar(agora.mais(6000))
     eva.auditar(agora.mais(6000))
+
+
+# ═══════════════════════════════════════════════ O Senhor falando com eles
+
+
+def test_a_semeadura_puxa_acao_de_verdade(agora):
+    """A falha que o Senhor apanhou: plantava-se uma vontade e ela não tocava
+    ação nenhuma — zero de doze. As palavras não significavam nada dentro dele."""
+    from novomundo.razoes import razoes_para
+
+    mundo = Mundo()
+    ele = Microcosmo("Ele", Sexo.HOMEM, Signo.LEAO, agora, posicao=mundo.onde_comeca())
+    ela = Microcosmo("Eva", Sexo.MULHER, Signo.PEIXES, agora, posicao=mundo.onde_comeca())
+    mundo.acolher(ele)
+    mundo.acolher(ela)
+    for i in range(300):
+        ele.viver_um_tick(mundo, agora.mais(i))
+        ela.viver_um_tick(mundo, agora.mais(i))
+
+    # Postos no mesmo lugar: sem o outro por perto não há conversa a puxar, e o
+    # teste mediria o acaso da viagem em vez do que ele quer verificar.
+    ela.corpo.posicao = ele.corpo.posicao
+
+    def quantas_puxadas() -> int:
+        return sum(
+            1
+            for acao, drive, _risco in mundo.acoes_possiveis(ele, agora.mais(300))
+            if any(r.tipo == "querer" for r in razoes_para(acao, drive, ele, ele.corpo.posicao[1]))
+        )
+
+    assert quantas_puxadas() == 0, "não devia haver vontade nenhuma ainda"
+    ele.ouvir(Dica("semeadura", "buscar uma companheira que me preencha de amor", 0.9),
+              agora.mais(300), mundo)
+    assert quantas_puxadas() > 0, "a vontade plantada não puxou ação nenhuma"
+
+
+def test_ele_diz_quando_nao_entende(agora):
+    """Ouvir e não saber por onde começar é honesto — e tem de ficar registrado,
+    em vez de virar um desejo mudo."""
+    mundo = Mundo()
+    ele = Microcosmo("Ele", Sexo.HOMEM, Signo.LEAO, agora, posicao=mundo.onde_comeca())
+
+    entendeu = ele.ouvir(Dica("semeadura", "quero ler os livros", 0.9), agora, mundo)
+    assert "entendi" in entendeu
+    assert ele.inteligencia.aspiracoes[-1].sabe_por_onde
+
+    perdido = ele.ouvir(Dica("semeadura", "xyzzy plúrbio quantoso", 0.9), agora, mundo)
+    assert "não sei" in perdido
+    assert not ele.inteligencia.aspiracoes[-1].sabe_por_onde
+    # E mesmo sem entender, o desejo existe: ele quer, e não sabe alcançar.
+    assert ele.inteligencia.aspiracoes[-1].intensidade > 0
+
+
+def test_o_lexico_e_a_lingua_nao_o_significado(agora):
+    """T9, opção (b): damos o léxico; o que cada coisa **vale** continua sendo o
+    que ele mediu vivendo."""
+    from novomundo.lexico import entender
+
+    mundo = Mundo()
+    assert "ler" in entender("quero estudar", mundo)
+    assert "unir-se" in entender("amor", mundo)
+    assert "Tóquio" in entender("vai a Toquio", mundo)  # sem acento também
+    assert "contemplar" in entender("quero orar", mundo)
+    assert entender("blarg zunfo", mundo) == set()
+    # Nomes de gente só são reconhecidos se ele os conhece.
+    assert entender("procura Eva", mundo) == set()
+    assert "Eva" in entender("procura Eva", mundo, conhecidos={"Eva"})
+
+
+def test_o_que_lhe_foi_dito_fica_registrado_com_o_que_ele_entendeu(agora):
+    """Para que quem fala com ele veja se aquilo chegou, em vez de falar com uma
+    parede."""
+    mundo = Mundo()
+    ele = Microcosmo("Ele", Sexo.HOMEM, Signo.LEAO, agora, posicao=mundo.onde_comeca())
+    ele.ouvir(Dica("voz", "há livros que te esperam", 0.8), agora, mundo)
+    canal, conteudo, entendeu, _quando = ele.ditos_do_senhor[-1]
+    assert canal == "voz" and conteudo == "há livros que te esperam" and entendeu

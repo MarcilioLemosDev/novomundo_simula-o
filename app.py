@@ -131,9 +131,17 @@ with st.sidebar:
         }[canal],
     )
     if st.button("dizer", use_container_width=True) and dito.strip():
-        next(s for s in seres if s.nome == a_quem).ouvir(Dica(canal, dito.strip(), 0.8), agora)
-        st.success(f"dito a {a_quem}")
+        quem = next(s for s in seres if s.nome == a_quem)
+        resposta = quem.ouvir(Dica(canal, dito.strip(), 0.8), agora, mundo)
+        st.session_state.ultima_resposta = (a_quem, resposta)
         st.rerun()
+
+    if "ultima_resposta" in st.session_state:
+        nome, resposta = st.session_state.ultima_resposta
+        if "não sei" in resposta:
+            st.warning(f"**{nome}:** {resposta}")
+        else:
+            st.success(f"**{nome}:** {resposta}")
 
     st.divider()
     st.markdown("## 🐍 A serpente")
@@ -209,6 +217,13 @@ for coluna, ser in zip(st.columns(2), seres):
                 st.markdown(
                     "**para ele(a):** " + " · ".join(f"{n} é {t}" for n, t in relacoes.items())
                 )
+
+            ditos = [d for d in ser.ditos_do_senhor if d[2]]
+            if ditos:
+                st.markdown("**o que lhe foi dito:**")
+                for canal_dito, conteudo, entendeu, quando in ditos[-3:]:
+                    icone = {"semeadura": "🌱", "voz": "🗣", "mundo": "🌍"}[canal_dito]
+                    st.markdown(f"{icone} _“{conteudo}”_  \n↳ {entendeu}")
 
             descobriu = ser.experiencia.o_que_me_move(3)
             if descobriu:

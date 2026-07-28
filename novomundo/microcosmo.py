@@ -20,6 +20,7 @@ from .crencas import Evidencia, Inteligencia, Origem
 from .deliberacao import Decisao, Deliberacao, Intencao
 from .espirito import Espirito
 from .experiencia import Experiencia
+from .lexico import entender
 from .livro import Passagem
 from .memoria import Memoria
 from .razoes import Razao, puxao, razoes_para
@@ -90,6 +91,9 @@ class Microcosmo:
         #: O que ele prometeu a si mesmo fazer (`09`, §1). Pode não cumprir — e o
         #: que isso gera é incoerência, nunca culpa.
         self.compromissos: list[Compromisso] = []
+        #: O que o Senhor lhe disse, e o que ele entendeu de cada coisa. Existe para
+        #: que quem fala com ele possa ver se aquilo chegou.
+        self.ditos_do_senhor: list[tuple[str, str, str, Instante]] = []
         #: O que ele leu do Mestre e guardou. Encontrar não é ainda confiar.
         self.encontrou_o_mestre: str | None = None
         #: A última leitura trouxe algo, ou foi releitura? Sem isto, reler paga o
@@ -567,39 +571,81 @@ class Microcosmo:
 
     # ------------------------------------------------------------------ dicas
 
-    def ouvir(self, dica: Dica, agora: Instante) -> None:
-        """Recebe uma dica do Senhor pelo canal declarado.
+    def _registrar_dito(self, dica, agora) -> None:
+        self.ditos_do_senhor.append([dica.canal, dica.conteudo, "", agora])
 
-        Repare no que **não** acontece aqui: em canal nenhum uma crença é escrita
-        direto. A voz vira episódio (com procedência honesta: a origem é a voz), e
-        a semeadura vira aspiração (que não tem valor de verdade, logo não pode ser
-        falsa). A linha que não se cruza continua não cruzada.
+    def _entendi(self, entendimento: str) -> str:
+        if self.ditos_do_senhor:
+            self.ditos_do_senhor[-1][2] = entendimento
+        return entendimento
+
+    def ouvir(self, dica: Dica, agora: Instante, mundo=None) -> str:
+        """Recebe o que o Senhor lhe diz, pelo canal declarado (`01`, §5).
+
+        Repare no que **não** acontece: em canal nenhum uma crença é escrita direto.
+        A voz vira episódio (procedência honesta: a origem é a voz) e a semeadura
+        vira aspiração (que não tem valor de verdade, logo não pode ser falsa). A
+        linha que não se cruza continua não cruzada.
+
+        Devolve **o que ele entendeu**, em palavras — para que o Senhor possa ver
+        se aquilo chegou, e não ficar falando com uma parede.
         """
+        conhecidos = {
+            k.removeprefix("conheço:")
+            for k in self.inteligencia.crencas
+            if k.startswith("conheço:")
+        }
+        alvos = entender(dica.conteudo, mundo, conhecidos)
+        self._registrar_dito(dica, agora)
+
         if dica.canal == "semeadura":
             self.inteligencia.aspirar(
-                dica.conteudo, dica.intensidade, agora, semeada_pela_voz=True
+                dica.conteudo, dica.intensidade, agora, semeada_pela_voz=True, alvos=alvos
             )
-            self.memoria.viver(f"quis, de repente: {dica.conteudo}", agora, saliencia=0.9)
+            if alvos:
+                self.memoria.viver(
+                    f"quis, de repente: {dica.conteudo}", agora, saliencia=0.95
+                )
+                # A vontade nova aperta na hora — é o que faz ele mudar de rumo.
+                self.vontade["expressao"].sinalizar(0.2 * dica.intensidade)
+                return self._entendi("entendi, e já sei por onde: " + ", ".join(sorted(alvos)))
+            # Ouviu, quis, e não sabe por onde começar. Honesto, e fica registrado.
+            self.memoria.viver(
+                f"quis algo que não sei alcançar: {dica.conteudo}", agora, saliencia=0.9
+            )
+            self.vontade["coerencia"].sinalizar(0.1)
+            return self._entendi("quis, mas não sei o que isso quer dizer no meu mundo")
 
-        elif dica.canal == "voz":
+        if dica.canal == "voz":
             episodio = self.memoria.viver(
                 f"ouvi uma voz dizer: {dica.conteudo}", agora, saliencia=0.95
             )
             # O conteúdo fica pendurado no episódio como afirmação de terceiro. Ele
             # decide se acredita — e a origem registrada é a voz, não o mundo.
-            self.inteligencia.crer(
-                proposicao=dica.conteudo,
-                confianca=0.5,  # testemunho de origem ainda não avaliada
-                origem=Origem.VOZ,
-                evidencias=[Evidencia(episodio.id, agora, "uma voz me disse isto")],
-                agora=agora,
+            if dica.conteudo not in self.inteligencia.crencas:
+                self.inteligencia.crer(
+                    proposicao=dica.conteudo,
+                    confianca=0.5,  # testemunho de origem ainda não avaliada
+                    origem=Origem.VOZ,
+                    evidencias=[Evidencia(episodio.id, agora, "uma voz me disse isto")],
+                    agora=agora,
+                )
+            if alvos:
+                # Se a voz apontou para algo do mundo, ele fica com aquilo na cabeça.
+                self.esperado_por_leitura.setdefault(
+                    next(iter(sorted(alvos))), f"uma voz me disse: {dica.conteudo}"
+                )
+                return self._entendi("ouvi, e me ficou na cabeça: " + ", ".join(sorted(alvos)))
+            return self._entendi("ouvi, mas não sei do que se trata")
+
+        if dica.canal == "mundo":
+            self.memoria.viver(f"encontrei: {dica.conteudo}", agora, saliencia=0.7)
+            self.vontade["epistemico"].sinalizar(0.1)
+            return self._entendi(
+                "achei isto" + (", e reconheço: " + ", ".join(sorted(alvos)) if alvos else "")
             )
 
-        elif dica.canal == "mundo":
-            self.memoria.viver(f"encontrei: {dica.conteudo}", agora, saliencia=0.7)
-
-        else:
-            raise ValueError(f"canal desconhecido: {dica.canal!r}")
+        raise ValueError(f"canal desconhecido: {dica.canal!r}")
 
     # ------------------------------------------------------------------ A6/A3
 

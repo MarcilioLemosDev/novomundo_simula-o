@@ -96,6 +96,13 @@ class Aspiracao:
     nascida_em: Instante
     semeada_pela_voz: bool = False
     realizada: bool = False
+    #: O que, deste mundo, ele entendeu que o desejo aponta. Vazio significa que
+    #: ouviu e não soube por onde começar — e isso é honesto (`lexico.py`).
+    alvos: set = field(default_factory=set)
+
+    @property
+    def sabe_por_onde(self) -> bool:
+        return bool(self.alvos)
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.intensidade <= 1.0:
@@ -347,6 +354,7 @@ class Inteligencia:
         intensidade: float,
         agora: Instante,
         semeada_pela_voz: bool = False,
+        alvos: set | None = None,
     ) -> Aspiracao:
         """Deseja algo. Não afirma nada sobre o mundo, logo nada pode ficar falso."""
         aspiracao = Aspiracao(
@@ -354,6 +362,7 @@ class Inteligencia:
             intensidade=intensidade,
             nascida_em=agora,
             semeada_pela_voz=semeada_pela_voz,
+            alvos=set(alvos or ()),
         )
         self.aspiracoes.append(aspiracao)
         return aspiracao

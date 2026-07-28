@@ -21,6 +21,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+def onde_tipo(onde: str) -> str:
+    """O tipo do lugar, a partir do nome. "Praça de Lima" → "praça"."""
+    return onde.split(" de ")[0].strip().lower() if onde else ""
+
+
 @dataclass(frozen=True)
 class Razao:
     """Um motivo para fazer algo que não é o proveito de fazê-lo."""
@@ -46,10 +51,16 @@ def razoes_para(acao, drive: str, quem, onde: str) -> list[Razao]:
     # A aspiração não tem valor de verdade e não paga nada. Move mesmo assim —
     # é para isso que ela existe (`01`, §4.3).
     for aspiracao in quem.inteligencia.aspiracoes:
-        if aspiracao.realizada:
+        if aspiracao.realizada or not aspiracao.alvos:
             continue
-        palavras = [p for p in aspiracao.desejo.lower().split() if len(p) > 4]
-        if any(p in (alvo + " " + acao.porque).lower() for p in palavras):
+        # Casa pelo que ele **entendeu** do desejo, não pela letra da frase. Antes
+        # era comparação de palavras soltas, e o resultado era zero: o Senhor
+        # plantava uma vontade e ela não puxava ação nenhuma.
+        if (
+            acao.verbo.value in aspiracao.alvos
+            or alvo in aspiracao.alvos
+            or onde_tipo(onde) in aspiracao.alvos
+        ):
             razoes.append(
                 Razao("querer", f"porque eu quero: {aspiracao.desejo}", aspiracao.intensidade)
             )
